@@ -13,9 +13,7 @@ Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for met
 	* Installing the whole metaWrap (1Gb) can be avoided
 * Add a bin quality module
 	* Final bins quality are automatically assessed based on the [MIMAG](https://www.nature.com/articles/nbt.3893) standard
-		* [CheckM](https://ecogenomics.github.io/CheckM/)
-		* [Barrnap](https://github.com/tseemann/barrnap)
-		* [tRNAScan-SE](http://lowelab.ucsc.edu/tRNAscan-SE/)
+	* Chimeric bins identification with [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
 
 ###  Pipeline description
 
@@ -35,10 +33,10 @@ Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for met
 * Reassembly of the binning results
 	* Currently only [unicycler](https://github.com/rrwick/Unicycler) is used to reassemble bins
 * Bins quality
-		* [CheckM](https://ecogenomics.github.io/CheckM/)
-		* [Barrnap](https://github.com/tseemann/barrnap)
-		* [tRNAScan-SE](http://lowelab.ucsc.edu/tRNAscan-SE/)
-		* [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
+	* [CheckM](https://ecogenomics.github.io/CheckM/)
+	* [Barrnap](https://github.com/tseemann/barrnap)
+	* [tRNAScan-SE](http://lowelab.ucsc.edu/tRNAscan-SE/)
+	* [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
 
 #### Output
 
