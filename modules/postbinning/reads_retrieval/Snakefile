@@ -1,0 +1,55 @@
+def get_check_binidx(wildcards):
+	binidx = wildcards.binidx
+	if int(binidx) < 1:
+		raise Exception('BinIdx cannot be < 1')
+	return binidx
+
+rule get_bin_contigs:
+	input:
+		'binning/{binner}/{sample}/raw/binlist.txt'
+	output:
+		'binning/{binner}/{sample}/reassembly/reads_retrieval/bin.{binidx}.contigs.txt'
+	params:
+		binidx = get_check_binidx
+	shell:
+		'grep "^>" $(sed \'{params.binidx}!d\' {input}) | sed "s/^.\{{1\}}//" > {output}'
+		# we extract the contig names from the fasta of the bin at the index `binidx` and remove 
+		# 1st character `>` from this contig names
+		# WARNING: Do not use index == 0 -> sed: -e expression #1, char 2: invalid usage of line address 0
+
+rule extract_bam:
+	input:
+		bam = 'data/mapping/{rtype}/{sample}/{sample}.bam',
+		bai = 'data/mapping/{rtype}/{sample}/{sample}.bam.bai',
+		clist = 'binning/{binner}/{sample}/reassembly/reads_retrieval/bin.{binidx}.contigs.txt'
+	output: # should be temp
+		temp('binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.bam')
+	conda:
+		'env/bamtools.yaml'
+	shell:
+		'cat {input.clist} | tr "\\n" " " | xargs samtools view -bh {input.bam} > {output}'
+		# we extract a subbam from the original bam based on the contigs list
+
+rule extract_reads:
+	input:
+		'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.bam'
+	output:
+		'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.r0.fastq.gz'
+	conda:
+		'env/bamtools.yaml'
+	shell:
+		'picard SamToFastq -I {input} -FASTQ {output}'
+
+rule extract_paired_reads:
+	input:
+		'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.bam'
+	output:
+		r1 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.r1.fastq.gz',
+		r2 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.r2.fastq.gz'
+	conda:
+		'env/bamtools.yaml'
+	shell:
+		'picard SamToFastq -I {input} -FASTQ {output.r1} -F2 {output.r2} -VALIDATION_STRINGENCY SILENT'
+		# if I don't use SILENT, an error is raised because some pairs were broken during the extraction
+		# see this: https://github.com/broadinstitute/picard/issues/715
+		# and maybe I should use FU (Output FASTQ file for unpaired reads)

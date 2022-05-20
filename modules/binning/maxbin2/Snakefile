@@ -1,0 +1,40 @@
+# Snakemake module to run maxbin2 binner
+# coverage.tsv is the result of samtools coverage of the bamfile linked to your assemblies (usually resulting from the mapping of short reads)
+
+rule make_abundance:
+    input:
+        "data/mapping/short/{sample}/{sample}.coverage.tsv"
+    output:
+        "data/mapping/short/{sample}/{sample}.maxbin.abundance.tsv"
+    shell:
+        "awk '{{if (NR!=1) {{print $1 \"\\t\" $7}} }}' {input} > {output}"
+
+rule run:
+    input:
+        wa = "data/assemblies/{sample}/{sample}.assemblies.fa",
+        de = "data/mapping/short/{sample}/{sample}.maxbin.abundance.tsv"
+    output:
+        "binning/maxbin2/{sample}/raw/run/{sample}.bin.summary"
+    params:
+        outname = "binning/maxbin2/{sample}/raw/run/{sample}.bin"
+    conda:
+        "env/maxbin2.yaml"
+    log:
+        "logs/{sample}.maxbin2.log"
+    threads:
+        8
+    shell:
+        "run_MaxBin.pl -contig {input.wa} -thread {threads} -out {params.outname} -abund1 {input.de} > {log} 2>&1"
+
+rule listbins:
+    input:
+        "binning/maxbin2/{sample}/raw/run/{sample}.bin.summary"
+    output:
+        "binning/maxbin2/{sample}/raw/binlist.txt"
+    params:
+        fasta = "binning/maxbin2/{sample}/raw/run/{sample}.bin.[0-9]*.fasta"
+        # outdir = "binning/maxbin2/{sample}/bins/clean"
+    shell:
+        # This is a bit ugly but do the job: 1. soft link with fasta to fa renaming + do not crash if no bins found
+        # "ls -d $(pwd)/{params.fasta} 1> {output} 2>/dev/null && (for fname in $(pwd)/{params.fasta}; do ln -s $fname {params.outdir}/$(basename ${{fname::-3}}); done)"
+        "ls -d $(pwd)/{params.fasta} 1> {output} 2>/dev/null"

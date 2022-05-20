@@ -1,0 +1,91 @@
+# https://github.com/rrwick/Unicycler#quick-usage
+
+# For now I have an issue with unicycler for some cases:
+# https://github.com/tseemann/shovill/issues/127
+# I need to fix this
+
+import os
+
+checkpoint unicycler_entry:
+    input:
+        'binning/{binner}/{sample}/raw/binlist.txt'
+    output:
+        'binning/{binner}/{sample}/unicycler/reassembly/input.binlist.txt'
+    shell:
+        'ln -s $(pwd)/{input} {output}'
+
+def get_assembly_inputs(wildcards):
+    # A bit of magic here
+    # For each bin found in the binlist, I generate an index
+    # which will be used as identifier. This index is then used
+    # to make a new output file corresponding to the bin.
+    # Unicycler will be run either as hybrid or short reads only
+
+    if 'nanopore' in config[wildcards.sample]:
+        method = rules.reassembly_bin_hybrid_unicycler
+    else:
+        method = rules.reassembly_bin_short_unicycler
+
+    binlist = checkpoints.unicycler_entry.get(** wildcards).output[0]
+
+    with open(binlist) as f:
+        binfiles = [fname.strip() for fname in f]
+
+    def complete_output(wildcards, output, bindix):
+        wildcards.binidx = str(bindix)
+        return output.apply_wildcards(wildcards)
+
+    return [
+        complete_output(wildcards, method.output[0], binidx)
+        for binidx, fname in enumerate(binfiles, start=1) if os.stat(fname) != 0
+    ]
+
+rule reassembly_bin_hybrid_unicycler:
+    input:
+        s1 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/short/bin.{binidx}.r1.fastq.gz',
+        s2 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/short/bin.{binidx}.r2.fastq.gz',
+        lr = 'binning/{binner}/{sample}/reassembly/reads_retrieval/long/bin.{binidx}.r0.fastq.gz'
+    params:
+        outdir = 'binning/{binner}/{sample}/unicycler/hybrid/run/{binidx}'
+    output:
+        'binning/{binner}/{sample}/unicycler/hybrid/run/{binidx}/assembly.fasta'
+    log:
+        'logs/{sample}.{binner}.{binidx}.unicycler.long.log'
+    conda:
+        'env/unicycler.yaml'
+    threads:
+        48
+    resources:
+        mem_mb = 32000 
+    shell:
+        '(unicycler -1 {input.s1} -2 {input.s2} -l {input.lr} -o {params.outdir} -t {threads}) 2>> {log}'
+        # metaLAS use an 'existing_long_read_assembly' made by flye - is it worth it ?
+
+rule reassembly_bin_short_unicycler:
+    input:
+        s1 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/short/bin.{binidx}.fastq.r1.gz',
+        s2 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/short/bin.{binidx}.fastq.r2.gz'
+    params:
+        outdir = 'binning/{binner}/{sample}/unicycler/short/run/{binidx}'
+    output:
+        'binning/{binner}/{sample}/unicycler/short/run/{binidx}/assembly.fasta'
+    log:
+        'logs/{sample}.{binner}.{binidx}.unicycler.short.log'
+    conda:
+        'env/unicycler.yaml'
+    threads:
+        48
+    resources:
+        mem_mb = 32000 
+    shell:
+        '(unicycler -1 {input.s1} -2 {input.s2} -l {input.lr} -o {params.outdir} -t {threads}) 2>> {log}'
+        # metaLAS use an 'existing_long_read_assembly' made by flye - is it worth it ?
+
+rule reassembly_all_bins_unicycler:
+    input:
+        binlist = 'binning/{binner}/{sample}/raw/binlist.txt',
+        fasta = get_assembly_inputs
+    output:
+        'binning/{binner}/{sample}/unicycler/binlist.txt'
+    shell:
+        'ls -d {input.fasta} > {output}'
