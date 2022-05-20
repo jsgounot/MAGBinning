@@ -1,0 +1,12 @@
+
+# snakemake -s assemblies.snk --configfile config_assembly.json -d res_assembly --use-conda --cores 16 
+
+rule all:
+    input:
+        'config_binning.json'
+
+module assembly:
+    snakefile: "modules/assembly/Snakefile"
+    config: config
+
+use rule * from assembly as assembly_*
