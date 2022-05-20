@@ -1,7 +1,7 @@
 {
-	"FMT001_3" : {
-		"r1" : "/mnt/volume1/data/reads/illumina/fastp_decont/WMS4584_1.cleaned.fq.gz",
-		"r2" : "/mnt/volume1/data/reads/illumina/fastp_decont/WMS4584_2.cleaned.fq.gz",
-		"assembly": "/mnt/volume1/analysis/binning/FMT001_3.500.fa"
+	"sample_name" : {
+		"r1" : "path_to_read1.fq.gz",
+		"r2" : "path_to_read1.fq.gz",
+		"assembly": "path_to_assembly.fa"
 	}
 }
