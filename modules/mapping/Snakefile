@@ -24,8 +24,8 @@ rule sr_bwa_mapping:
     input:
         fasta = "data/assemblies/{sample}/{sample}.assemblies.fa",
         index = "data/assemblies/{sample}/{sample}.assemblies.fa.amb",
-        r1 = lambda wildcards: config[wildcards.sample]["illumina_1"],
-        r2 = lambda wildcards: config[wildcards.sample]["illumina_2"]
+        r1 = lambda wildcards: config[wildcards.sample]["r1"],
+        r2 = lambda wildcards: config[wildcards.sample]["r2"]
     output:
         # temp("data/assemblies/{sample}/{sample}.bam")
         "data/mapping/short/{sample}/{sample}.bam"

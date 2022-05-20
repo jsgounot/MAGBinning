@@ -1,19 +1,30 @@
 import os, glob
 
-configfile: "config.json"
+configfile: "config_binning.json"
+
+# snakemake -s binning.snk --configfile res_assembly/config_binning.json -d res_binning --use-conda --cores 18 --resources mem_mb=60000
+
+# ----------------------------------------------------------------------------------------------------
+
+# UPDATE THIS PART WITH YOUR CONFIGURATION
+config['softparams'] = {
+        'gunc_db' : "/mnt/volume1/Projects/MAGBinning/database/gunc/gunc_db_progenomes2.1.dmnd"
+    }
+
+# ----------------------------------------------------------------------------------------------------
 
 BINNERS = ('metabat2', 'maxbin2', 'concoct')
 
 rule all:
     input:
+        'binning/metabat2/quality_data/raw/tables/bins_info.tsv',
         #expand("binning/{binner}/table/bins_info.tsv", binner=BINNERS),
         #expand("binning/{binner}/table/mags_info.tsv", binner=BINNERS)
         #'binning/refined/FMT009_3/dereplicate/checkm/results.tsv'
         #'binning/refined/quality_data/unicycler/tables/mags_info.tsv'
         #directory('binning/refined/FMT005_1/unicycler/binlist.txt'),
         #'binning/maxbin2/quality_data/raw/tables/bins_info.tsv',
-        'binning/maxbin2/quality_data/unicycler/tables/bins_info.tsv',
-        #'binning/refined/quality_data/raw/tables/bins_info.tsv',
+        #'binning/maxbin2/quality_data/unicycler/tables/bins_info.tsv',
         #'binning/refined/quality_data/unicycler/tables/bins_info.tsv'
 
 # Import modules

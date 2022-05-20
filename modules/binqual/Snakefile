@@ -13,7 +13,7 @@
 
 import glob, os
 
-SAMPLES = list(config)
+SAMPLES = [sample for sample in config if sample != 'softparams']
 TDATA = {}
 
 checkpoint binqual_entry:
@@ -182,6 +182,32 @@ rule trnaScanSe_parse:
     script:
         "scripts/parse_trnascan.py"
 
+rule gunc:
+    input:
+        "binning/{binner}/{sample}/{postbinning}/binlist.txt"
+    output:
+        "binning/{binner}/{sample}/{postbinning}/quality/gunc/GUNC.progenomes_2.1.maxCSS_level.tsv"
+    params:
+        directory = "binning/{binner}/{sample}/{postbinning}/quality/gunc",
+        db = config['softparams']['gunc_db']
+    threads:
+        16
+    conda:
+        'env/gunc.yaml'
+    log:
+        "logs/{binner}.{sample}.{postbinning}.quality.gunc.log"
+    shell:
+        "gunc run -f {input} -o {params.directory} --threads {threads} --db_file {params.db} &> {log}"
+
+rule gunc:
+    input:
+        binlist = 'binning/{binner}/{sample}/{postbinning}/binlist.txt',
+        gunc = 'binning/{binner}/{sample}/{postbinning}/quality/gunc/GUNC.progenomes_2.1.maxCSS_level.tsv'
+    output:
+        'binning/{binner}/{sample}/{postbinning}/quality/gunc/result.tsv'
+    script:
+        'scripts/parse_gunc.py'
+
 # ------------------------------------------------------------------------------------
 # Final outputs
 
@@ -194,9 +220,11 @@ def fun(* args, ** kwargs):
 
 rule fuse_info:
     input:
+        binlist  = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/binlist.txt", fun, binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning),
         checkm   = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/checkm/results.tsv", fun, binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning),
         barrnap  = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/barrnap/results.tsv", fun,binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning),
-        trnascan = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/results.tsv", fun,binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning)
+        trnascan = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/results.tsv", fun,binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning),
+        gunc     = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/gunc/result.tsv", fun,binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning),
     output:
         bins = "binning/{binner}/quality_data/{postbinning}/tables/bins_info.tsv",
         mags = "binning/{binner}/quality_data/{postbinning}/tables/mags_info.tsv",
