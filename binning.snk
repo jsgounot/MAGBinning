@@ -1,8 +1,14 @@
 import os, glob
 
-configfile: "config_binning.json"
-
+# configfile: "config_binning.json"
 # snakemake -s binning.snk --configfile res_assembly/config_binning.json -d res_binning --use-conda --cores 18 --resources mem_mb=60000
+
+# ----------------------------------------------------------------------------------------------------
+
+for sample, sdata in config.items():
+    for key, fname in sdata.items():
+        if not os.path.isfile(fname):
+            raise OSError(f'File not found for sample `{sample}`, {key}: `{fname}`')
 
 # ----------------------------------------------------------------------------------------------------
 
@@ -14,62 +20,71 @@ config['softparams'] = {
 # ----------------------------------------------------------------------------------------------------
 
 BINNERS = ('metabat2', 'maxbin2', 'concoct')
+CONDAENV = ('bamtools', 'biopy', 'checkm', 'concoct', 'gunc', 'mapping', 'maxbin2', 'megahit', 'metabat2', 'rna_tools', 'unicycler')
 
 rule all:
     input:
-        'binning/metabat2/quality_data/raw/tables/bins_info.tsv',
-        #expand("binning/{binner}/table/bins_info.tsv", binner=BINNERS),
-        #expand("binning/{binner}/table/mags_info.tsv", binner=BINNERS)
-        #'binning/refined/FMT009_3/dereplicate/checkm/results.tsv'
-        #'binning/refined/quality_data/unicycler/tables/mags_info.tsv'
-        #directory('binning/refined/FMT005_1/unicycler/binlist.txt'),
-        #'binning/maxbin2/quality_data/raw/tables/bins_info.tsv',
-        #'binning/maxbin2/quality_data/unicycler/tables/bins_info.tsv',
-        #'binning/refined/quality_data/unicycler/tables/bins_info.tsv'
+        #'binning/refined/quality_data/raw/tables/bins_info.tsv',
+        'binning/minimap2/quality_data/raw/tables/bins_info.tsv',
+        expand('workflow/conda_used/{condaenv}.yaml', condaenv=CONDAENV)
+
+rule conda_export_env:
+    output:
+        'workflow/conda_used/{condaenv}.yaml'
+    conda:
+        'workflow/envs/{condaenv}.yaml'
+    shell:
+        'conda env export > {output}'
+
+rule temp_empty:
+    output:
+        temp(touch('empty_file.tmp'))
+
+# ----------------------------------------------------------------------------------------------------       
 
 # Import modules
 
 module mapping:
-    snakefile: "modules/mapping/Snakefile"
+    snakefile: "workflow/mapping.snk"
     config: config
 
 use rule * from mapping as mapping_*
 
 module concoct:
-    snakefile: "modules/binning/concoct/Snakefile"
+    snakefile: "workflow/concoct.snk"
 
 use rule * from concoct as concoct_*
 
 module maxbin2:
-    snakefile: "modules/binning/maxbin2/Snakefile"
+    snakefile: "workflow/maxbin2.snk"
 
 use rule * from maxbin2 as maxbin2_*
 
 module metabat2:
-    snakefile: "modules/binning/metabat2/Snakefile"
+    snakefile: "workflow/metabat2.snk"
 
 use rule * from metabat2 as metabat2_*
 
 module binrefiner:
-    snakefile: "modules/binrefiner/Snakefile"
+    snakefile: "workflow/binrefiner.snk"
     config: config
 
 use rule * from binrefiner as binrefiner_*
 
 module binqual:
-    snakefile: "modules/binqual/Snakefile"
+    snakefile: "workflow/binqual.snk"
     config: config
 
 use rule * from binqual as binqual_*
 
 module reads_retrieval:
-    snakefile: "modules/postbinning/reads_retrieval/Snakefile"
+    snakefile: "workflow/reads_retrieval.snk"
     config: config
 
 use rule * from reads_retrieval as reads_retrieval_*
 
 module unicycler:
-    snakefile: "modules/postbinning/unicycler/Snakefile"
+    snakefile: "workflow/unicycler.snk"
     config: config
 
 use rule * from unicycler as unicycler_*

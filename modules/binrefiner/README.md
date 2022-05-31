@@ -1,2 +1,0 @@
-## Snakemake bin refinement module
-

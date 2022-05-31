@@ -1,0 +1,6 @@
+name: bamtools
+channels:
+  - bioconda
+dependencies:
+  - picard 
+  - samtools

@@ -1,0 +1,5 @@
+name: unicycler
+channels:
+  - bioconda
+dependencies:
+  - unicycler

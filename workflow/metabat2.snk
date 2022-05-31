@@ -1,0 +1,41 @@
+# Snakemake module to run metabat2 binner
+
+rule contig_depth:
+    input:
+        bam = "data/mapping/short/{sample}/{sample}.bam",
+        bai = "data/mapping/short/{sample}/{sample}.bam.bai"
+    output:
+        "data/mapping/short/{sample}/{sample}.jgi_depth"
+    conda:
+        "envs/metabat2.yaml"
+    log:
+        "logs/{sample}.metabat2.log"
+    shell:
+        "jgi_summarize_bam_contig_depths --outputDepth {output} {input.bam} 2>> {log}"
+        
+rule run:
+    input:
+        wa = "data/assemblies/{sample}/{sample}.assemblies.fa",
+        de = "data/mapping/short/{sample}/{sample}.jgi_depth"
+    output:
+        "binning/metabat2/{sample}/raw/run/check.empty" # temp
+    params:
+        outname = "binning/metabat2/{sample}/raw/run/{sample}.bin"
+    conda:
+        "envs/metabat2.yaml"
+    log:
+        "logs/{sample}.metabat2_mapping.log"
+    shell:
+        "metabat2 --unbinned -i {input.wa} -a {input.de} -o {params.outname} && touch {output} 2>> {log}"
+
+rule softlink:
+    input:
+        "binning/metabat2/{sample}/raw/run/check.empty"
+    output:
+        "binning/metabat2/{sample}/raw/binlist.txt"
+    params:
+        fasta = "binning/metabat2/{sample}/raw/run/{sample}.bin.[0-9]*.fa",
+        #outdir = "binning/metabat2/{sample}/bins/clean/"
+    shell:
+        #"ls -d $(pwd)/{params.fasta} 1> {output} 2>/dev/null && ln -s $(pwd)/{params.fasta} {params.outdir} 2>/dev/null"
+        "ls -d $(pwd)/{params.fasta} 1> {output} 2>/dev/null || true"

@@ -3,10 +3,11 @@
 
 rule all:
     input:
-        'config_binning.json'
+        'config_binning.json',
+        'assemblies.stats.tsv'
 
 module assembly:
-    snakefile: "modules/assembly/Snakefile"
+    snakefile: "workflow/assembly.snk"
     config: config
 
 use rule * from assembly as assembly_*

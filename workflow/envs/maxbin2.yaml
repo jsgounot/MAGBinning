@@ -1,0 +1,5 @@
+name: maxbin2
+channels:
+  - bioconda
+dependencies:
+  - maxbin2

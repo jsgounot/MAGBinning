@@ -1,0 +1,125 @@
+# Snakemake pipeline module to refine binning results
+# Adapted from metaLAS (1) and metaWrap (2)
+# Briefly, bins from different binners (here maxbin2, metabat2 and concot) will be compare together
+# if two bins contained similar contigs, the intersection is done and a new bin is created with this intersection
+# this should create smaller bins but more accurate. These bins will then be checked with CheckM.
+# Best bins will then be selected and duplicated bins will be removed
+# This Snakefile include several script providing improvements to previously done scripts
+# 1. https://github.com/SeanChenHCY/metaLAS
+# 2. https://github.com/bxlab/metaWRAP
+# One change to the original is the absence of additionnal modifications once dereplication is done using checkM
+# I feel like this is an overdo of looking for the best checkM result and might lead to duplicated contigs
+# for different bins, which does not make sense to me. I don't know if it would be possible to recapture
+# dereplicated bins which does not pass the checkM thresholds - and then find a solution to rearrange them to
+# to reinclude them in the dataset, but this seems complexe and deserve proper investigation before implementation.
+
+def agg_checkm_refiner(wildcard):
+    # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
+    binlist = checkpoints.merge.get(sample=wildcard.sample).output[wildcard.group]
+    if os.stat(binlist) != 0 : return "binning/refined/{sample}/raw/generate/{group}/checkm/eval.tsv"
+    return binlist
+
+checkpoint merge:
+    input:
+        'binning/maxbin2/{sample}/raw/binlist.txt',
+        'binning/metabat2/{sample}/raw/binlist.txt',
+        'binning/concoct/{sample}/raw/binlist.txt'
+    output:
+        AB = 'binning/refined/{sample}/raw/generate/AB/binlist.tsv',
+        AC = 'binning/refined/{sample}/raw/generate/AC/binlist.tsv',
+        BC = 'binning/refined/{sample}/raw/generate/BC/binlist.tsv',
+        ABC = 'binning/refined/{sample}/raw/generate/ABC/binlist.tsv'
+    params:
+        outdir = 'binning/refined/{sample}/raw/generate/'
+    conda:
+        'envs/biopy.yaml'
+    script:
+        'scripts/refiner_snake.py'
+
+rule prepare_checkm:
+    input:
+        "binning/refined/{sample}/raw/generate/{group}/binlist.tsv"
+    output:
+        touch("binning/refined/{sample}/raw/generate/{group}/checkm/inputs/check.empty")
+    params:
+        "binning/refined/{sample}/raw/generate/{group}/checkm/inputs/"
+    shell:
+        'while read fname; do ln -s $fname {params}/$(basename $fname).checkminput; done < $"{input}"'
+
+rule checkm_lineage:
+    input:
+        "binning/refined/{sample}/raw/generate/{group}/checkm/inputs/check.empty"
+    output:
+        "binning/refined/{sample}/raw/generate/{group}/checkm/lineage.ms"
+    params:
+        bindir = "binning/refined/{sample}/raw/generate/{group}/checkm/inputs/",
+        outdir = "binning/refined/{sample}/raw/generate/{group}/checkm"
+    threads:
+        16
+    resources:
+         mem_mb = 35000 #35G for pplacer
+    priority: 
+        1
+    log:
+        "logs/refined.{sample}.{group}.raw.quality.checkm.log"
+    conda:
+        "envs/checkm.yaml"
+    shell: 
+        "checkm lineage_wf -t {threads} -x checkminput {params.bindir} {params.outdir} &> {log}"
+
+rule checkm_quality:
+    input :
+        "binning/refined/{sample}/raw/generate/{group}/checkm/lineage.ms"
+    output:
+        "binning/refined/{sample}/raw/generate/{group}/checkm/eval.tsv"
+    params:
+        outdir = "binning/refined/{sample}/raw/generate/{group}/checkm"
+    log:
+        "logs/refined.{sample}.{group}.raw.quality.checkm.log"
+    conda:
+        "envs/checkm.yaml"
+    shell: 
+        "checkm qa -o 2 {input} {params.outdir} > {output} 2>> {log}"
+
+rule checkm_parse:
+    input:
+        agg_checkm_refiner
+        # "binning/refined/{sample}/generate/{group}/checkm/eval.tsv"
+    output :
+        "binning/refined/{sample}/raw/generate/{group}/checkm/results.tsv"
+    script:
+        "scripts/parse_checkm.py"
+
+rule consolidate:
+    input:
+        lambda wc: expand("binning/refined/{sample}/raw/generate/{group}/checkm/results.tsv", sample=wc.sample, group=('AB', 'AC', 'BC', 'ABC')),
+        lambda wc: expand("binning/{binner}/{sample}/raw/quality/checkm/results.tsv", sample=wc.sample, binner=('maxbin2', 'metabat2', 'concoct'))
+    output:
+        'binning/refined/{sample}/raw/consolidate/checkm.results.tsv'
+    params:
+        overlap = 80 # to change if needed
+    conda:
+        'envs/biopy.yaml'
+    script:
+        'scripts/consolidate_snake.py'
+
+rule dereplicate:
+    input:
+        'binning/refined/{sample}/raw/consolidate/checkm.results.tsv'
+    output:
+        'binning/refined/{sample}/raw/dereplicate/binlist.txt'
+    params:
+        partial = True,
+        makesym = True
+    conda:
+        'envs/biopy.yaml'
+    script:
+        'scripts/dereplicate_snake.py'
+
+rule softlink_bins:
+    input:
+        'binning/refined/{sample}/raw/dereplicate/binlist.txt'
+    output:
+        'binning/refined/{sample}/raw/binlist.txt'
+    shell:
+        'ln -s $(pwd)/{input} {output}'

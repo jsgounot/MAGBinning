@@ -1,0 +1,7 @@
+name: mapping
+channels:
+  - bioconda
+dependencies:
+  - bwa 
+  - minimap2 
+  - samtools

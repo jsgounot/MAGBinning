@@ -1,0 +1,95 @@
+# Snakemake module to run metabat2 binner
+# Default concoct use a mininimum contig size of 1000bp
+# I the assembly has no contig with this size, it crashes
+
+checkpoint link_assembly:
+    input:
+        "data/assemblies/{sample}/{sample}.assemblies.1k.fa"
+    output:
+        "binning/concoct/{sample}/raw/preprocessing/assembly.fa"
+    shell:
+        'ln -s $(pwd)/{input} {output}'
+
+rule preprocessing_cut:
+    input:
+        rules.link_assembly.output
+    output:
+        c10 = "binning/concoct/{sample}/raw/preprocessing/contigs_10K.fa",
+        b10 = "binning/concoct/{sample}/raw/preprocessing/contigs_10K.bed"
+    conda:
+        "envs/concoct.yaml"
+    shell:
+        'cut_up_fasta.py {input} -c 10000 -o 0 --merge_last -b {output.b10} > {output.c10}'
+
+rule preprocessing_cov:
+    input:
+        bed = "binning/concoct/{sample}/raw/preprocessing/contigs_10K.bed",
+        bam = "data/mapping/short/{sample}/{sample}.bam",
+        bai = "data/mapping/short/{sample}/{sample}.bam.bai"
+    output:
+        "binning/concoct/{sample}/raw/preprocessing/coverage_table.tsv",
+    conda:
+        "envs/concoct.yaml"
+    shell:
+        'concoct_coverage_table.py {input.bed} {input.bam} > {output}'
+
+rule binning:
+    input:
+        c10 = 'binning/concoct/{sample}/raw/preprocessing/contigs_10K.fa',
+        cov = 'binning/concoct/{sample}/raw/preprocessing/coverage_table.tsv'
+    output:
+        'binning/concoct/{sample}/raw/run/clustering_gt1000.csv'
+    params:
+        'binning/concoct/{sample}/raw/run/'
+    conda:
+        "envs/concoct.yaml"
+    threads:
+        8
+    log:
+        "logs/{sample}.concoct.log"
+    shell:
+        'concoct --composition_file {input.c10} --coverage_file {input.cov} -b {params} -t {threads} > {log} 2>&1'
+
+rule merge:
+    input:
+        'binning/concoct/{sample}/raw/run/clustering_gt1000.csv'
+    output:
+        'binning/concoct/{sample}/raw/run/clustering_merged.csv'
+    conda:
+        "envs/concoct.yaml"
+    shell:
+        'merge_cutup_clustering.py {input} > {output}'
+
+rule extract:
+    input:
+        original = 'data/assemblies/{sample}/{sample}.assemblies.fa',
+        merge = 'binning/concoct/{sample}/raw/run/clustering_merged.csv'
+    output:
+        touch('binning/concoct/{sample}/raw/run/check.empty')
+    params:
+        'binning/concoct/{sample}/raw/run/'
+    conda:
+        "envs/concoct.yaml"
+    shell:
+        'extract_fasta_bins.py {input.original} {input.merge} --output_path {params}'
+
+def agg_concoct(wildcard):
+    # we need to check here that the filtered fasta file is not empty
+    # if it is empty, we skip the concoct process
+
+    fasta = checkpoints.link_assembly.get(** wildcard).output[0]
+    
+    if os.stat(fasta).st_size != 0 : 
+        return 'binning/concoct/{sample}/raw/run/check.empty'
+    else:
+        return 'empty_file.tmp'
+
+rule softlink:
+    input:
+        agg_concoct
+    output:
+        "binning/concoct/{sample}/raw/binlist.txt"
+    params:
+        fasta = "binning/concoct/{sample}/raw/run/[0-9]*.fa",
+    shell:
+        "ls -d $(pwd)/{params.fasta} 1> {output} 2>/dev/null || true"

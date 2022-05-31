@@ -1,0 +1,60 @@
+# Snakemake module to run metabinner binner
+# I never been able to make this code works with my data
+# Need to be checked
+
+rule contig_depth:
+    input:
+        bam = "data/mapping/short/{sample}/{sample}.bam",
+        bai = "data/mapping/short/{sample}/{sample}.bam.bai"
+    output:
+        "data/mapping/short/{sample}/{sample}.jgi_depth_nidv"
+    conda:
+        "envs/metabat2.yaml"
+    log:
+        "logs/{sample}.metabat2.log"
+    shell:
+        "jgi_summarize_bam_contig_depths --outputDepth {output} --noIntraDepthVariance {input.bam} 2>> {log}"
+        
+rule depth_cut:
+    input:
+        rules.contig_depth.ouput
+    output:
+        "binning/metabinner/{sample}/raw/run/coverage_profile_f1k.tsv"
+    shell:
+        "cat {input} | awk '{if ($2>1000) print $0 }' | cut -f -1,4- > {output}"
+
+checkpoint link_assembly:
+    input:
+        "data/assemblies/{sample}/{sample}.assemblies.1k.fa"
+    output:
+        "binning/metabinner/{sample}/raw/run/assembly.fa"
+    shell:
+        'ln -s $(pwd)/{input} {output}'
+
+rule genkmer:
+    input:
+        rules.link_assembly.output
+    output:
+        'binning/metabinner/{sample}/raw/run/kmer_4_f1000.csv'
+    conda:
+        'envs/metabinner.yaml'
+    shell:
+        'python $(dirname $(which run_metabinner.sh))/scripts/gen_kmer.py {input} 1000 4'
+
+rule run:
+    input:
+        assembly = rules.link_assembly.output
+        coverage = rules.depth_cut.output
+        kmer_profil = rules.genkmer.output
+    output:
+        'binning/metabinner/{sample}/raw/run/metabinner_res/metabinner_result.tsv'
+    params:
+        outdir = 'binning/metabinner/{sample}/raw/run'
+    conda:
+        "envs/metabinner.yaml"
+    threads:
+        8
+    log:
+        "logs/{sample}.metabinner.log"
+    shell:
+        'bash run_metabinner.sh -a {input.assemblies} -o {params.outdir} -d {input.coverage} -k {input.kmer_profil} -p $(dirname $(which run_metabinner.sh)'

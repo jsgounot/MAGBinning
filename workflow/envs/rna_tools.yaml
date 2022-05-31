@@ -1,0 +1,6 @@
+name: rna_tools
+channels:
+  - bioconda
+dependencies:
+  - trnascan-se 
+  - barrnap 

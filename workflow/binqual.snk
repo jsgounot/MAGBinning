@@ -1,0 +1,266 @@
+# Snakemake pipeline module to evaluate quality of your bins
+# Run: Checkm, tranScan-Se, barrnap, gunc and add info about coverage
+# Should be able to deal with empty folders
+# Fasta files must have .fa extension (checkm)
+# binlist is a simple file containing `ls -d *.bins.fa`
+# this snakemake module use checkpoint to autoupdate analysis based on binlist
+
+import glob, os
+from itertools import product
+
+SAMPLES = [sample for sample in config if sample != 'softparams']
+TDATA = {}
+
+checkpoint binqual_entry:
+    input:
+        "binning/{binner}/{sample}/{postbinning}/binlist.txt"
+    output:
+        "binning/{binner}/{sample}/{postbinning}/quality/binlist.txt"
+    shell:
+        'ln -s $(pwd)/{input} {output}'
+
+rule bincontigs:
+    input:
+        'binning/{binner}/{sample}/{postbinning}/binlist.txt'
+    output:
+        'binning/{binner}/{sample}/{postbinning}/bincontigs.txt'
+    shell:
+        # The empty string is necessary in case of empty bin files
+        'grep -H "^>" $(cat {input}) > {output}'
+
+rule bincov:
+    input:
+        bincontigs  = 'binning/{binner}/{sample}/{postbinning}/bincontigs.txt',
+        bincoverage = 'data/mapping/short/{sample}/{sample}.depth.tsv'
+    output:
+        'binning/{binner}/{sample}/{postbinning}/bincov.tsv'
+    script:
+        'scripts/bins_coverage.py'
+
+# ------------------------------------------------------------------------------------
+# Checkm
+
+rule prepare_checkm:
+    input:
+        "binning/{binner}/{sample}/{postbinning}/binlist.txt"
+    output:
+        touch("binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/check.empty")
+    params:
+        "binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/"
+    shell:
+        'while read fname; do ln -s $fname {params}/$(basename $fname).checkminput; done < $"{input}"'
+
+rule checkm_lineage:
+    input:
+        "binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/check.empty"
+    output:
+        "binning/{binner}/{sample}/{postbinning}/quality/checkm/lineage.ms"
+    params:
+        bindir = "binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/",
+        outdir = "binning/{binner}/{sample}/{postbinning}/quality/checkm"
+    threads:
+        8
+    resources:
+         mem_mb = 35000 #35G for pplacer
+    priority: 
+        1
+    log:
+        "logs/{binner}.{sample}.{postbinning}.quality.checkm.log"
+    conda:
+        "envs/checkm.yaml"
+    shell: 
+        "checkm lineage_wf -t {threads} -x checkminput {params.bindir} {params.outdir} &> {log}"
+
+rule checkm_quality:
+    input :
+        "binning/{binner}/{sample}/{postbinning}/quality/checkm/lineage.ms"
+    output:
+        "binning/{binner}/{sample}/{postbinning}/quality/checkm/eval.tsv"
+    params:
+        outdir = "binning/{binner}/{sample}/{postbinning}/quality/checkm"
+    log:
+        "logs/{binner}.{sample}.{postbinning}.quality.checkm.log"
+    conda:
+        "envs/checkm.yaml"
+    shell: 
+        "checkm qa -o 2 {input} {params.outdir} > {output} 2>> {log}"
+
+def agg_checkm(wildcard):
+    # We need to make a conditional execution here specific to checkM
+    # since these results are also requiered by binrefiner.snk
+
+    binlist = checkpoints.binqual_entry.get(** wildcard).output[0]
+    
+    if os.stat(binlist).st_size != 0 : 
+        return 'binning/{binner}/{sample}/{postbinning}/quality/checkm/eval.tsv'
+    else:
+        return 'empty_file.tmp'
+
+rule checkm_parse:
+    input:
+        #'binning/{binner}/{sample}/{postbinning}/quality/checkm/eval.tsv'
+        agg_checkm
+    output :
+        "binning/{binner}/{sample}/{postbinning}/quality/checkm/results.tsv"
+    script:
+        "scripts/parse_checkm.py"
+
+# ------------------------------------------------------------------------------------
+# Barrnap
+
+rule barrnap:
+    input :
+        "binning/{binner}/{sample}/{postbinning}/quality/binlist.txt"
+    output:
+        "binning/{binner}/{sample}/{postbinning}/quality/barrnap/check.empty"
+    conda:
+        "envs/rna_tools.yaml"
+    params:
+        "binning/{binner}/{sample}/{postbinning}/quality/barrnap"
+    log:
+        "logs/{binner}.{sample}.{postbinning}.quality.barrnap.log"
+    shell:
+        'while read fname; do barrnap $fname > {params}/${{fname##*/}}.barrnap.txt; done < $"{input}"  && touch {output} 2> {log}'
+
+rule barrnap_parse:
+    input:
+        'binning/{binner}/{sample}/{postbinning}/quality/barrnap/check.empty'
+    output :
+        "binning/{binner}/{sample}/{postbinning}/quality/barrnap/results.tsv"
+    script:
+        "scripts/parse_barrnap.py"
+
+# ------------------------------------------------------------------------------------
+# TRNAScan-SE
+
+rule trnaScanSe_arch:
+    input:
+        lambda wc: TDATA[(wc.binner, wc.sample, wc.postbinning)][wc.idx]
+    output:
+        'binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/arch/sample.{idx}.trnascan.res.txt'
+    conda:
+        "envs/rna_tools.yaml"
+    shell:
+        'tRNAscan-SE -A -Q -o {output} {input}'
+
+rule trnaScanSe_bact:
+    input:
+        lambda wc: TDATA[(wc.binner, wc.sample, wc.postbinning)][wc.idx]
+    output:
+        'binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/bact/sample.{idx}.trnascan.res.txt'
+    conda:
+        "envs/rna_tools.yaml"
+    shell:
+        'tRNAscan-SE -B -Q -o {output} {input}'
+
+def read_binlist(fname):
+    with open(fname) as f:
+        return [line.strip() for line in f]
+
+def agg_trnascan(wildcard):
+    # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
+    binlist = checkpoints.binqual_entry.get(** wildcard).output[0]
+    
+    bins = read_binlist(binlist)
+    data = {str(idx) : binpath for idx, binpath in enumerate(bins)}
+    TDATA[(wildcard.binner, wildcard.sample, wildcard.postbinning)] = data
+    
+    arc = [os.path.join('binning', wildcard.binner, wildcard.sample, wildcard.postbinning, 'quality/trnaScanSe/arch', 
+                    'sample.' + str(idx) + '.trnascan.res.txt') for idx, binpath in data.items()]
+    
+    bac = [os.path.join('binning', wildcard.binner, wildcard.sample, wildcard.postbinning, 'quality/trnaScanSe/bact', 
+                    'sample.' + str(idx) + '.trnascan.res.txt') for idx, binpath in data.items()]
+
+    return arc + bac 
+
+rule trnaScanSe_parse:
+    input:
+        agg_trnascan
+    output :
+        "binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/results.tsv"
+    params:
+        lambda wc: TDATA[(wc.binner, wc.sample, wc.postbinning)]
+    script:
+        "scripts/parse_trnascan.py"
+
+# ------------------------------------------------------------------------------------
+# GUNC
+
+rule gunc:
+    input:
+        "binning/{binner}/{sample}/{postbinning}/binlist.txt"
+    output:
+        "binning/{binner}/{sample}/{postbinning}/quality/gunc/GUNC.progenomes_2.1.maxCSS_level.tsv"
+    params:
+        directory = "binning/{binner}/{sample}/{postbinning}/quality/gunc",
+        db = config['softparams']['gunc_db']
+    threads:
+        8
+    conda:
+        'envs/gunc.yaml'
+    log:
+        "logs/{binner}.{sample}.{postbinning}.quality.gunc.log"
+    shell:
+        "gunc run -f {input} -o {params.directory} --threads {threads} --db_file {params.db} &> {log}"
+
+rule gunc_parse:
+    input:
+        binlist = 'binning/{binner}/{sample}/{postbinning}/binlist.txt',
+        gunc = 'binning/{binner}/{sample}/{postbinning}/quality/gunc/GUNC.progenomes_2.1.maxCSS_level.tsv'
+    output:
+        'binning/{binner}/{sample}/{postbinning}/quality/gunc/result.tsv'
+    script:
+        'scripts/parse_gunc.py'
+
+# ------------------------------------------------------------------------------------
+# Final outputs
+
+rule create_bininfo:
+    input:
+        bincov   = "binning/{binner}/{sample}/{postbinning}/bincov.tsv",
+        checkm   = "binning/{binner}/{sample}/{postbinning}/quality/checkm/results.tsv",
+        barrnap  = "binning/{binner}/{sample}/{postbinning}/quality/barrnap/results.tsv",
+        trnascan = "binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/results.tsv",
+        gunc     = "binning/{binner}/{sample}/{postbinning}/quality/gunc/result.tsv",
+    output:
+        temp('binning/{binner}/{sample}/{postbinning}/quality/bininfo.temp.tsv')
+    script:
+        'scripts/fuse_bininfo.py'
+
+rule fuse_bininfo_empty:
+    output:
+        temp(touch('binning/{binner}/{sample}/{postbinning}/quality/bininfo.empty.temp.tsv'))
+
+def agg_bininfo(wildcard):
+    # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
+    binlist = checkpoints.binqual_entry.get(** wildcard).output[0]
+    
+    if os.stat(binlist).st_size != 0 : 
+        return 'binning/{binner}/{sample}/{postbinning}/quality/bininfo.temp.tsv'
+    else:
+        return 'binning/{binner}/{sample}/{postbinning}/quality/bininfo.empty.temp.tsv'
+
+rule agg_bininfo:
+    input:
+        agg_bininfo
+    output:
+        'binning/{binner}/{sample}/{postbinning}/quality/bininfo.tsv'
+    shell:
+        'cp {input} {output}'
+
+def fun(* args, ** kwargs):
+    for element in product(* args):
+        yield element
+
+rule merge_sample_bininfo:
+    input:
+        bininfos = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/bininfo.tsv", fun, binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning),
+        binlists = lambda wildcard: expand("binning/{binner}/{sample}/{postbinning}/quality/binlist.txt", fun, binner=wildcard.binner, sample=SAMPLES, postbinning=wildcard.postbinning)
+    output:
+        bins = "binning/{binner}/quality_data/{postbinning}/tables/bins_info.tsv",
+        mags = "binning/{binner}/quality_data/{postbinning}/tables/mags_info.tsv",
+    params:
+        bindir = "binning/{binner}/quality_data/{postbinning}/bins/",
+        magdir = "binning/{binner}/quality_data/{postbinning}/mags/"
+    script:
+        "scripts/merge_bininfo.py"
