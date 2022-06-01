@@ -5,19 +5,17 @@ Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for met
 ### Pros
 
 * Fine-tuning and versatility of the snakemake pipeline
-* - Each pipeline part is a module and can be changed and or removed
-  - Allow implementation of other tools more easily
-  - Time-consuming parts were tuned in the pipeline to make the whole process faster
+	* Each pipeline part is a module and can be changed and or removed
+  * Allow implementation of other tools more easily
+  * Time-consuming parts were tuned in the pipeline to make the whole process faster
 
 * Rewriting of the [metaWRAP binning](https://i.imgur.com/JL665Qo.png) module
-
-* - Direct implementation of original python scripts for snakemake
-  - Installing the whole metaWrap (1Gb) can be avoided
+	* Direct implementation of original python scripts for snakemake
+  * Installing the whole metaWrap (1Gb) can be avoided
 
 * Add a bin quality module
-
-* - Quality of final bins is automatically assessed based on the [MIMAG](https://www.nature.com/articles/nbt.3893) standard
-  - Chimeric bins identification with [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
+	* Quality of final bins is automatically assessed based on the [MIMAG](https://www.nature.com/articles/nbt.3893) standard
+  * Chimeric bins identification with [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
 
 ###  Pipeline description
 
