@@ -1,0 +1,177 @@
+'''
+VAMB is a bit different in the way that all samples are process at once.
+Moreover, all samples are mapped against a single concatenated reference
+
+Inspired by the official VAMB pipeline: https://github.com/RasmussenLab/vamb/tree/master/workflow
+
+Important notes:
+* Some subjectif cutoff were used here and you might need to change them
+* VAMB run much faster with GPU which is not implemented here
+
+The fact that all samples are processed together make the structure directory a bit different.
+I need to make first a directory at binning/vamb_process_process with results
+and then link results to individual samples to be run as other software at binning/vamb_process/sample
+
+It's fair to say that this process is suboptimal in this case since we could process all bins together
+for quality. But this would break current pipeline process and there is no way I'm doing this.
+'''
+
+SAMPLES = [sample for sample in config if sample != 'softparams']
+
+rule cat_contigs:
+    input:
+        expand('data/assemblies/{sample}/{sample}.assemblies.1k.fa', sample=SAMPLES)
+    output:
+        'binning/vamb_process/raw/preprocessing/contigs.flt.fna.gz'
+    threads:
+        1
+    conda:
+        "envs/vamb.yaml"
+    shell:
+        "concatenate.py {output} {input} -m 1000"
+
+rule minimap2_index:
+    input:
+        rules.cat_contigs.output
+    output:
+        'binning/vamb_process/raw/preprocessing/contigs.flt.mmi'
+    threads:
+        1
+    log:
+        'logs/vamb.minimap2.index.log'
+    params:
+        index_size = '12G'
+    conda: 
+        'envs/mapping.yaml'
+    shell:
+        "minimap2 -I {params.index_size} -d {output} {input} 2> {log}"
+
+rule samtools_dict:
+    input:
+        rules.cat_contigs.output
+    output:
+        'binning/vamb_process/raw/preprocessing/contigs.flt.dict'
+    threads:
+        1
+    log:
+        'logs/vamb.samtools.dict.log'
+    conda:
+        'envs/mapping.yaml'
+    shell:
+        "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
+
+rule minimap2_mapping:
+    input:
+        r1 = lambda wildcards: config[wildcards.sample]["r1"],
+        r2 = lambda wildcards: config[wildcards.sample]["r2"],
+        mmi = rules.minimap2_index.output,
+        sdict = rules.samtools_dict.output
+    output:
+        temp('binning/vamb_process/raw/preprocessing/mapping/{sample}.bam')
+    threads:
+        8
+    log:
+        'logs/vamb.minimap2.mapping.{sample}.log'
+    conda:
+        'envs/mapping.yaml'
+    shell:
+        'minimap2 -t {threads} -ax sr {input.mmi} {input.r1} {input.r2} -N 5 | grep -v "^@" | cat {input.sdict} - | samtools view -F 3584 -b - > {output} 2> {log}'
+
+rule samtools_sort:
+    input:
+        rules.minimap2_mapping.output
+    output:
+        temp('binning/vamb_process/raw/preprocessing/mapping/{sample}.sort.bam')
+    params:
+        prefix = 'binning/vamb_process/raw/preprocessing/mapping/tmp.{sample}'
+    threads:
+        8
+    log:
+        'logs/vamb.samtools.sort.{sample}.log'
+    conda:
+        'envs/mapping.yaml'
+    shell:
+        "samtools sort {input} -T {params.prefix} --threads {threads} -m 3G -o {output} 2> {log}"
+
+rule jgi_depth:
+    input:
+        rules.samtools_sort.output
+    output:
+        temp('binning/vamb_process/raw/preprocessing/mapping/{sample}.raw.jgi')
+    threads:
+        1
+    log:
+        'logs/vamb.jgi.{sample}.log'
+    conda:
+        'envs/metabat2.yaml'
+    shell:
+        "jgi_summarize_bam_contig_depths --noIntraDepthVariance --outputDepth {output} {input} 2>{log}"
+
+rule cut_column1to3: 
+    input:
+        'binning/vamb_process/raw/preprocessing/mapping/%s.raw.jgi' %SAMPLES[0] 
+    output:
+        'binning/vamb_process/raw/preprocessing/jgi/jgi.column1to3'
+    shell: 
+        'cut -f1-3 {input} > {output}'
+
+rule cut_column4to5:
+    input:
+        'binning/vamb_process/raw/preprocessing/mapping/{sample}.raw.jgi'
+    output:
+        'binning/vamb_process/raw/preprocessing/mapping/{sample}.cut.jgi'
+    shell: 
+        'cut -f1-3 --complement {input} > {output}'
+
+rule paste_abundances:
+    input:
+        c13 = rules.cut_column1to3.output,
+        jgi = expand('binning/vamb_process/raw/preprocessing/mapping/{sample}.cut.jgi', sample=SAMPLES)
+    output:
+        'binning/vamb_process/raw/preprocessing/jgi/jgi.abundance.dat'
+    shell: 
+        'paste {input.c13} {input.jgi} > {output}'
+
+rule vamb:
+    input:
+        jgi = rules.paste_abundances.output,
+        contigs = rules.cat_contigs.output
+    output:
+        di = directory('binning/vamb_process/raw/run/'),
+        cl = 'binning/vamb_process/raw/run/clusters.tsv'
+    params:
+        vamb_params = '-o C -m 1000 --minfasta 500000'
+    log:
+        'logs/vamb.log'
+    threads:
+        8
+    conda:
+        'envs/vamb.yaml'
+    shell:
+        'rm -r {output.di} && vamb --outdir {output.di} --fasta {input.contigs} --jgi {input.jgi} {params.vamb_params} 2> {log}'
+
+rule parse_vamb:
+    input:
+        cluster = rules.vamb.output.cl,
+        contigs = rules.cat_contigs.output,
+        indcons = expand('data/assemblies/{sample}/{sample}.assemblies.1k.fa', sample=SAMPLES)
+    output:
+        'binning/vamb_process/raw/run/vamb.stat.tsv'
+    params:
+        minsize = 100000,
+        samples = SAMPLES,
+        binsdir = 'binning/vamb' #switching directory
+    conda:
+        'envs/biopy.yaml'
+    script:
+        'scripts/parse_vamb.py'
+
+rule softlink:
+    input:
+        rules.parse_vamb.output
+    output:
+        'binning/vamb/{sample}/raw/binlist.txt'
+    params:
+        fasta = "binning/vamb/{sample}/raw/bins/{sample}.bin.*.fa",
+    shell:
+        "ls -d $(pwd)/{params.fasta} 1> {output} 2>/dev/null || true"

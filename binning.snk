@@ -25,7 +25,7 @@ CONDAENV = ('bamtools', 'biopy', 'checkm', 'concoct', 'gunc', 'mapping', 'maxbin
 rule all:
     input:
         #'binning/refined/quality_data/raw/tables/bins_info.tsv',
-        'binning/minimap2/quality_data/raw/tables/bins_info.tsv',
+        #'binning/vamb/quality_data/raw/tables/bins_info.tsv',
         expand('workflow/conda_used/{condaenv}.yaml', condaenv=CONDAENV)
 
 rule conda_export_env:
@@ -64,6 +64,12 @@ module metabat2:
     snakefile: "workflow/metabat2.snk"
 
 use rule * from metabat2 as metabat2_*
+
+module vamb:
+    snakefile: "workflow/vamb.snk"
+    config: config
+
+use rule * from vamb as vamb_*
 
 module binrefiner:
     snakefile: "workflow/binrefiner.snk"

@@ -1,0 +1,5 @@
+name: vamb
+channels:
+  - bioconda
+dependencies:
+  - vamb
