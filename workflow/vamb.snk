@@ -10,9 +10,10 @@ Important notes:
 
 The fact that all samples are processed together makes the structure directory a bit different.
 I need to make first a directory at binning/vamb_process_process with results
-and then link results to individual samples to be run as other software at binning/vamb_process/sample
+and then link results to individual samples to be run like other bin results with bins quality 
+softwares at binning/vamb_/{sample}
 
-It's fair to say that this process is suboptimal in this case since we could process all bins together
+It's fair to say that this process is suboptimal in some cases since we could process all bins together
 for quality. But this would break the current pipeline process and there is no way I'm doing this.
 '''
 
