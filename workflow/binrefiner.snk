@@ -55,7 +55,7 @@ rule checkm_lineage:
         bindir = "binning/refined/{sample}/raw/generate/{group}/checkm/inputs/",
         outdir = "binning/refined/{sample}/raw/generate/{group}/checkm"
     threads:
-        16
+        8
     resources:
          mem_mb = 35000 #35G for pplacer
     priority: 

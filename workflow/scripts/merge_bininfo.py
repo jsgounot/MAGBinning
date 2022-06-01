@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2022-05-30 17:50:06
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-05-30 19:13:20
+# @Last Modified time: 2022-06-01 19:28:36
 
 import pandas as pd
 import os
@@ -49,7 +49,7 @@ outdir = snakemake.params.bindir
 link_bins(df['ID'], binpaths, outdir)
 
 # MAGs tab and links
-df = df[df["MIMAG"].isin(("MEDIUM", "HIGH"))]
+df = df[df["MIMAG"] != 'LOW']
 df.to_csv(magstat, sep="\t", index=False)
 outdir = snakemake.params.magdir
 link_bins(df['ID'], binpaths, outdir)

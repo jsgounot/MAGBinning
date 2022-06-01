@@ -26,9 +26,9 @@ Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for met
 	* [concoct](https://github.com/BinPro/CONCOCT)
 	* [maxbin2](https://sourceforge.net/projects/maxbin2/)
 	* [metabat2](https://bitbucket.org/berkeleylab/metabat/src)
-	* [vamb](https://github.com/RasmussenLab/vamb) (see specific note)
-	* [metabinner](https://github.com/ziyewang/MetaBinner) (not finished, see note)
-	* refined - similar to [metawrap](https://github.com/bxlab/metaWRAP) (see specific note)
+	* [vamb](https://github.com/RasmussenLab/vamb) ([see specific note](https://github.com/jsgounot/MAGBinning#vamb))
+	* [metabinner](https://github.com/ziyewang/MetaBinner) (not finished)
+	* refined - similar to [metawrap](https://github.com/bxlab/metaWRAP) ([see specific note](https://github.com/jsgounot/MAGBinning#binning-refinement))
 * Reassembly of the binning results
 	* Currently, only [unicycler](https://github.com/rrwick/Unicycler) is used to reassemble bins
 * Bins quality

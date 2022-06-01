@@ -24,8 +24,9 @@ CONDAENV = ('bamtools', 'biopy', 'checkm', 'concoct', 'gunc', 'mapping', 'maxbin
 
 rule all:
     input:
-        #'binning/refined/quality_data/raw/tables/bins_info.tsv',
-        #'binning/vamb/quality_data/raw/tables/bins_info.tsv',
+        'binning/metabat2/quality_data/raw/tables/bins_info.tsv',
+        'binning/vamb/quality_data/raw/tables/bins_info.tsv',
+        'binning/refined/quality_data/raw/tables/bins_info.tsv',
         expand('workflow/conda_used/{condaenv}.yaml', condaenv=CONDAENV)
 
 rule conda_export_env:
