@@ -1,6 +1,6 @@
-## Another Snakemake binning module
+## Another Snakemake assembly/binning module
 
-Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for metagenomic binning. This pipeline is mostly a translation and cleaner version of the [metaLAS](https://github.com/SeanChenHCY/metaLAS) pipeline, itself very inspired by the [metaWRAP](https://github.com/bxlab/metaWRAP) pipeline. The current pipeline also includes an additional quality module. 
+Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for metagenomic assembly and binning. This pipeline was at first mostly a translation and cleaner version of the [metaLAS](https://github.com/SeanChenHCY/metaLAS) pipeline, itself very inspired by the [metaWRAP](https://github.com/bxlab/metaWRAP) pipeline. Current pipeline is now much more complete. including an optional assembly step, a complete quality module, a reassembly options and additional binners. 
 
 ### Pros
 
@@ -21,25 +21,20 @@ Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for met
 
 #### Summary
 
-* Inputs are an assembly and reads used for this assembly
 * Bins data in different ways:
-	* [concoct](https://github.com/BinPro/CONCOCT)
-	* [maxbin2](https://sourceforge.net/projects/maxbin2/)
-	* [metabat2](https://bitbucket.org/berkeleylab/metabat/src)
-	* [vamb](https://github.com/RasmussenLab/vamb) ([see specific note](https://github.com/jsgounot/MAGBinning#vamb))
-	* [metabinner](https://github.com/ziyewang/MetaBinner) (not finished)
-	* refined - similar to [metawrap](https://github.com/bxlab/metaWRAP) ([see specific note](https://github.com/jsgounot/MAGBinning#binning-refinement))
+  * [concoct](https://github.com/BinPro/CONCOCT)
+  * [maxbin2](https://sourceforge.net/projects/maxbin2/)
+  * [metabat2](https://bitbucket.org/berkeleylab/metabat/src)
+  * [vamb](https://github.com/RasmussenLab/vamb) ([see specific note](https://github.com/jsgounot/MAGBinning#vamb))
+  * [metabinner](https://github.com/ziyewang/MetaBinner) (not finished)
+  * refined - similar to [metawrap](https://github.com/bxlab/metaWRAP) ([see specific note](https://github.com/jsgounot/MAGBinning#binning-refinement))
 * Reassembly of the binning results
-	* Currently, only [unicycler](https://github.com/rrwick/Unicycler) is used to reassemble bins
+  * Currently, only [unicycler](https://github.com/rrwick/Unicycler) is used to reassemble bins
 * Bins quality
-	* [CheckM](https://ecogenomics.github.io/CheckM/)
-	* [Barrnap](https://github.com/tseemann/barrnap)
-	* [tRNAScan-SE](http://lowelab.ucsc.edu/tRNAscan-SE/)
-	* [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
-
-#### Output
-
-The pipeline will generate and evaluate your bins. In the end, you will have a directory with all bins, a directory with all mags (both softlinked), and two tables with bins and MAGs metrics. Note that MAGs are just a subset of bins with medium and above quality.
+  * [CheckM](https://ecogenomics.github.io/CheckM/)
+  * [Barrnap](https://github.com/tseemann/barrnap)
+  * [tRNAScan-SE](http://lowelab.ucsc.edu/tRNAscan-SE/)
+  * [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
 
 #### Bins quality
 
@@ -62,45 +57,36 @@ Couple of notes:
 * `GUNC` results are not used for MIMAG rank. **I highly recommend anyone to either remove or at least carefully examine chimeric MAGs**
 * Some studies do not use rank but make analysis base on a score: `completness - 5 x contamination`. MAGs can be selected using a threshold of score > 50.
 
-### Before running the pipeline
+### Conda environments and local variables
 
-Some software cannot be completely set up automatically:
+While it's in theory possible to run the pipeline without conda, using conda is highly recommended. This pipeline use an extensive amount of software with potential conflict between them. 
+
 * [**MANDATORY**] You need to download [Snakemake](https://snakemake.readthedocs.io/en/stable/) and [conda](https://docs.conda.io/en/latest/). [Mamba](https://github.com/mamba-org/mamba) is nice too.
 * [**MANDATORY**] You need to download [gunc database](https://grp-bork.embl-community.io/gunc/installation.html) using gunc and provide the database path into the `binning.snk` file.
 * [**OPTIONAL**] If you want to run [opera-ms](https://github.com/CSB5/OPERA-MS) assembly, you will need to install the software yourself [using a conda environment](https://github.com/CSB5/OPERA-MS/issues/48) and provide OPERA-MS executable in the `assembly/Snakefile` file.
 
-### The assembly part
-
-A small pipeline is available with this package to generate assemblies which can be run this way:
-
-```
-snakemake -s assemblies.snk --configfile config_assembly.json -d res_assembly --use-conda --cores 16 
-```
-
-Where `config_assembly.json` is a json configuration file with reads data for each sample looking like this:
-```
-{
-    "sample": {
-        "assembler": "megahit",
-        "r1": "path.to.read1.fq.gz",
-        "r2": "path.to.read2.fq.gz"
-    }
-}
-```
-
-Available assemblers are `megahit`, `flye`, `canu`, `operams` (more can be easily added). Reads must be gziped before. Once the process finishes, you should have a new configuration file at `res_assembly/config_binning.json` which can be used for the snakemake binner pipeline.
+By default, I set up 7 conda environments (which can be found in `workflow/envs`). The conda environment to use for each software is provided within the file `condaenvs.json` . By default, snakemake will automatically downloads and sets up these environment, but you can change on environment with one of your by editing the json file.
 
 ### Binning: The quick way
 
-I highly recommend having a look at the pipeline configuration process and the resources requirement first. Sample information (short-reads) and assembly must be provided in a configuration file (named `res_assembly/config_binning.json`).
+I highly recommend having a look at the pipeline configuration process and the resources requirement first. Sample information (short-reads) and assembly must be provided in a configuration file (named `config_binning.json`).
 
 Once you generated a configuration file (use the template), test the pipeline with a dry run:
-`snakemake -s binning.snk --configfile res_assembly/config_binning.json -d res_binning --use-conda --cores 18 -np`
+`snakemake -s binning.snk --configfile config_binning.json -d res_binning --use-conda --cores 18 -np`
 
 You can then run the pipeline this way:
 `snakemake -s binning.snk --configfile res_assembly/config_binning.json -d res_binning --use-conda --cores 18 --resources mem_mb=60000 --rerun-incomplete --keep-going`
 
-This will run the pipeline with 18 cores and 60Gb of memory. Note that you can also run snakemake on a cluster, [see the documentation](https://snakemake.readthedocs.io/en/stable/executing/cluster.html).
+This will run the pipeline with 18 cores and 60Gb of memory.
+
+### With an assembly
+
+Most of the assemblers are not completely set up in the workflow, this part needs to be finished. While the default `binning.snk` workflow expects to find an assembly in the configuration file, you can easily edit this file to include an assembler as provided with `megahit_metabat2.snk` example. Here is the important line in the beginning of the script:
+
+```python
+for sample, sdata in config.items():
+    sdata['assembly'] = f'assembly/completed/megahit/{sample}.fa'
+```
 
 ### Pipeline configuration
 
@@ -126,27 +112,21 @@ VAMB does not offer defined post and pre-processing of data, [which differs from
 
 ### Notes on the computer resources
 
-The pipeline requires several tools, each having variable needs. Note that it's nearly impossible to define required computer resources since it highly depends on your input data (biological sample, assembly quality and sequencing depth). I record here tools that might be a bottleneck. Overall I recommend using a system with a minimum of 24CPU and at least ~ 100Gb of RAMs (minimum 40Gb).
+The pipeline requires several tools, each having variable needs. Note that it's nearly impossible to define required computer resources since it highly depends on your input data (biological sample, assembly quality and sequencing depth). I record here tools that might be a bottleneck. Overall I recommend using a system with a minimum of 24CPU and at least ~ 100Gb of RAMs (**minimum 40Gb**). <u>I recommend adding a bit more CPU than what you  have (5/10%)</u> since some tools steps under-use resources which are given to them.
 
-#### Overall: Don't trust the progress values and add a bit more
+#### Overall: Don't trust the progress values
 
-The pipeline uses several times [checkpoint](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution) to finely adapts its process to generated bins. Therefore, the number of remaining rules will most likely increase during the pipeline execution. <u>I recommend adding a bit more CPU than what you  have (5/10%)</u> since some tools steps under-use resources which are given to them.
+The pipeline uses several times [checkpoint](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution) to finely adapts its process to generated bins. Therefore, the number of remaining rules will most likely increase during the pipeline execution. 
 
 #### The issue with CheckM
 
-[CheckM lineage workflow](https://github.com/Ecogenomics/CheckM/wiki/Workflows#lineage-specific-workflow) uses pplacer to identify the lineage of the bin into a taxonomic tree. This process is memory intensive and scales linearly. In this pipeline, we assume that you might have a lot of bins, coming at different times. This way, we run Checkm individually for each sample. However, this might be suboptimal for low bins quantity and low memory setup, I hope this will not be a big issue for you.
+[CheckM lineage workflow](https://github.com/Ecogenomics/CheckM/wiki/Workflows#lineage-specific-workflow) uses pplacer to identify the lineage of the bin into a taxonomic tree. This process is memory intensive and scales linearly. In this pipeline, we assume that you might have a lot of bins, coming at different times. This way, we run Checkm individually for each sample. However, this might be suboptimal for low bins quantity and low memory setup, I hope this will not be a big issue for you. I noticed that Checkm crashes on some cluster configurations.
 
-Additionally, I noticed that Checkm crashes on some cluster configurations.
+#### Bins refinement - A memory expensive process
 
-#### Mapping
+The binning refinement tool uses `checkM` completeness and contamination values on all binning result **and** binning combinations. This means that for a single sample with refinement from 3 binners, you have 3 + 4 ``checkM`` analyses to do. `checkM` internally uses `pplacer` which is known to be slow and requires [at least 35Gb of memory](https://github-wiki-see.page/m/Ecogenomics/CheckM/wiki/Installation). This can be improved by using additional `pplacer` threads, but the memory requirement is linear to the number of threads involved, so this is not an ideal solution. If memory is absolutely not an issue for you, you might want to change `checkM` calls directly in the snakemake pipeline at `workflow/binqual.snk`.
 
-All binning tools use (but not only) coverage information that need assembly mapping. This is done using a classical `BWA` or `minimap2` mapping.
-
-#### Binning refinement
-
-The binning refinement tool uses `checkM` completness and contamination values on all binning result **and** binning combinations. This means that for a single sample with refinement from 3 binners, you have 3 + 4 ``checkM`` analyses to do. `checkM` internally uses `pplacer` which is known to be slow and requires [at least 35Gb of memory](https://github-wiki-see.page/m/Ecogenomics/CheckM/wiki/Installation). This can be improved by using additional `pplacer` threads, but the memory requirement is linear to the number of threads involved, so this is not an ideal solution. If memory is absolutely not an issue for you, you might want to change `checkM` calls directly in the snakemake pipeline at `workflow/binqual.snk`.
-
-#### Reassembly
+#### Reassembly - A CPU expensive process
 
 This step uses [unicycler](https://github.com/rrwick/Unicycler) for each bin and can be particularly intensive, especially if you have high depth. This process involves 32 CPUs and `unicycler` calls several software, including [spades](https://www.biostars.org/p/267228/) which is known to take a lot of memory for some well-covered samples, [especially when it is too multi-threaded](https://www.biostars.org/p/267228/). You might need to reduce the rule to 16 CPUs. I do not recommend using the reassembly mode unless you have a low number of samples (< 20) or unlimited resources.
 

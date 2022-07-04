@@ -17,7 +17,7 @@ rule preprocessing_cut:
         c10 = "binning/concoct/{sample}/raw/preprocessing/contigs_10K.fa",
         b10 = "binning/concoct/{sample}/raw/preprocessing/contigs_10K.bed"
     conda:
-        "envs/concoct.yaml"
+        config['softparams']['conda']['concoct']
     shell:
         'cut_up_fasta.py {input} -c 10000 -o 0 --merge_last -b {output.b10} > {output.c10}'
 
@@ -29,7 +29,7 @@ rule preprocessing_cov:
     output:
         "binning/concoct/{sample}/raw/preprocessing/coverage_table.tsv",
     conda:
-        "envs/concoct.yaml"
+        config['softparams']['conda']['concoct']
     shell:
         'concoct_coverage_table.py {input.bed} {input.bam} > {output}'
 
@@ -42,7 +42,7 @@ rule binning:
     params:
         'binning/concoct/{sample}/raw/run/'
     conda:
-        "envs/concoct.yaml"
+        config['softparams']['conda']['concoct']
     threads:
         8
     log:
@@ -56,7 +56,7 @@ rule merge:
     output:
         'binning/concoct/{sample}/raw/run/clustering_merged.csv'
     conda:
-        "envs/concoct.yaml"
+        config['softparams']['conda']['concoct']
     shell:
         'merge_cutup_clustering.py {input} > {output}'
 
@@ -69,7 +69,7 @@ rule extract:
     params:
         'binning/concoct/{sample}/raw/run/'
     conda:
-        "envs/concoct.yaml"
+        config['softparams']['conda']['concoct']
     shell:
         'extract_fasta_bins.py {input.original} {input.merge} --output_path {params}'
 

@@ -1,5 +1,8 @@
-name: checkm
+name: binqual
 channels:
   - bioconda
 dependencies:
   - checkm-genome 
+  - trnascan-se 
+  - barrnap 
+  - gunc

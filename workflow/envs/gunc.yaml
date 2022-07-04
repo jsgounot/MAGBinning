@@ -1,5 +1,0 @@
-name: gunc
-channels:
-  - bioconda
-dependencies:
-  - gunc

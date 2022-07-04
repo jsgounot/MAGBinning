@@ -7,7 +7,7 @@ rule contig_depth:
     output:
         "data/mapping/short/{sample}/{sample}.jgi_depth"
     conda:
-        "envs/metabat2.yaml"
+        config['softparams']['conda']['metabat2']
     log:
         "logs/{sample}.metabat2.log"
     shell:
@@ -22,7 +22,7 @@ rule run:
     params:
         outname = "binning/metabat2/{sample}/raw/run/{sample}.bin"
     conda:
-        "envs/metabat2.yaml"
+        config['softparams']['conda']['metabat2']
     log:
         "logs/{sample}.metabat2_mapping.log"
     shell:

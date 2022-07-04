@@ -25,7 +25,7 @@ rule extract_bam:
 	output: # should be temp
 		temp('binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.bam')
 	conda:
-		'envs/bamtools.yaml'
+		config['softparams']['conda']['samtools']
 	shell:
 		'cat {input.clist} | tr "\\n" " " | xargs samtools view -bh {input.bam} > {output}'
 		# we extract a subbam from the original bam based on the contigs list
@@ -36,7 +36,7 @@ rule extract_reads:
 	output:
 		'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.r0.fastq.gz'
 	conda:
-		'envs/bamtools.yaml'
+		config['softparams']['conda']['picard']
 	shell:
 		'picard SamToFastq -I {input} -FASTQ {output}'
 
@@ -47,7 +47,7 @@ rule extract_paired_reads:
 		r1 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.r1.fastq.gz',
 		r2 = 'binning/{binner}/{sample}/reassembly/reads_retrieval/{rtype}/bin.{binidx}.r2.fastq.gz'
 	conda:
-		'envs/bamtools.yaml'
+		config['softparams']['conda']['picard']
 	shell:
 		'picard SamToFastq -I {input} -FASTQ {output.r1} -F2 {output.r2} -VALIDATION_STRINGENCY SILENT'
 		# if I don't use SILENT, an error is raised because some pairs were broken during the extraction

@@ -1,14 +1,13 @@
-import os, glob
+import os, glob, json
 
 # configfile: "config_binning.json"
 # snakemake -s binning.snk --configfile res_assembly/config_binning.json -d res_binning --use-conda --cores 18 --resources mem_mb=60000
 
 # ----------------------------------------------------------------------------------------------------
+# ADD THE MEGAHIT ASSEMBLY IN THE PROCESS
 
 for sample, sdata in config.items():
-    for key, fname in sdata.items():
-        if not os.path.isfile(fname):
-            raise OSError(f'File not found for sample `{sample}`, {key}: `{fname}`')
+    sdata['assembly'] = f'assembly/completed/megahit/{sample}.fa'
 
 # ----------------------------------------------------------------------------------------------------
 # UPDATE THIS PART WITH YOUR CONFIGURATION
@@ -28,17 +27,19 @@ with open(fname) as f:
 
 rule all:
     input:
-        'binning/metabat2/quality_data/raw/tables/bins_info.tsv',
-        'binning/vamb/quality_data/raw/tables/bins_info.tsv',
-        'binning/refined/quality_data/raw/tables/bins_info.tsv'
+        'binning/metabat2/quality_data/raw/tables/bins_info.tsv'
 
 rule temp_empty:
     output:
         temp(touch('empty_file.tmp'))
 
-# ----------------------------------------------------------------------------------------------------       
+# ----------------------------------------------------------------------------------------------------
 
-# Import modules
+module assembly:
+    snakefile: "workflow/assembly.snk"
+    config: config
+
+use rule * from assembly as assembly_*
 
 module mapping:
     snakefile: "workflow/mapping.snk"
@@ -48,16 +49,19 @@ use rule * from mapping as mapping_*
 
 module concoct:
     snakefile: "workflow/concoct.snk"
+    config: config
 
 use rule * from concoct as concoct_*
 
 module maxbin2:
     snakefile: "workflow/maxbin2.snk"
+    config: config
 
 use rule * from maxbin2 as maxbin2_*
 
 module metabat2:
     snakefile: "workflow/metabat2.snk"
+    config: config
 
 use rule * from metabat2 as metabat2_*
 

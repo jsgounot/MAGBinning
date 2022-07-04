@@ -1,5 +1,7 @@
-name: maxbin2
+name: binners
 channels:
   - bioconda
 dependencies:
   - maxbin2
+  - metabat2
+  - concoct

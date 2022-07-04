@@ -30,7 +30,7 @@ rule operams:
         outdir = directory('assembly/operams/{sample}'),
         fasta = protected('assembly/operams/{sample}/contigs.polished.fasta')
     conda:
-        'envs/operams.yaml'
+        config['softparams']['conda']['operams']
     log:
         'logs/{sample}/assembly.operams.log'
     threads:
@@ -59,7 +59,7 @@ rule megahit_paired:
         # In this version I remove intermediate files which took a lot of space
         interm = 'assembly/megahit/{sample}/intermediate_contigs'
     conda:
-        'envs/megahit.yaml'
+        config['softparams']['conda']['megahit']
     threads:
         16
     log:
@@ -79,8 +79,6 @@ rule link_megahit:
 
 AVAILABLE = {'megahit', 'operams', 'flye', 'canu'}
 DEFAULT = 'none'
-
-print (config)
 
 def getoutput(sample):
     assembler = config[sample].get('assembler', DEFAULT)
@@ -109,7 +107,7 @@ rule make_stat:
     output:
         'assemblies.stats.tsv'
     conda:
-        'envs/biopy.yaml'
+        config['softparams']['conda']['biopy']
     script:
         'scripts/assembly_stat.py'
 

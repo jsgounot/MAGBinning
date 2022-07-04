@@ -1,5 +1,6 @@
-name: megahit
+name: assemblers
 channels:
   - bioconda
 dependencies:
   - megahit
+  - unicycler

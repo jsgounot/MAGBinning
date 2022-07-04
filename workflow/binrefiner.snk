@@ -32,7 +32,7 @@ checkpoint merge:
     params:
         outdir = 'binning/refined/{sample}/raw/generate/'
     conda:
-        'envs/biopy.yaml'
+        config['softparams']['conda']['biopy']
     script:
         'scripts/refiner_snake.py'
 
@@ -63,7 +63,7 @@ rule checkm_lineage:
     log:
         "logs/refined.{sample}.{group}.raw.quality.checkm.log"
     conda:
-        "envs/checkm.yaml"
+        config['softparams']['conda']['checkm']
     shell: 
         "checkm lineage_wf -t {threads} -x checkminput {params.bindir} {params.outdir} &> {log}"
 
@@ -77,7 +77,7 @@ rule checkm_quality:
     log:
         "logs/refined.{sample}.{group}.raw.quality.checkm.log"
     conda:
-        "envs/checkm.yaml"
+        config['softparams']['conda']['checkm']
     shell: 
         "checkm qa -o 2 {input} {params.outdir} > {output} 2>> {log}"
 
@@ -99,7 +99,7 @@ rule consolidate:
     params:
         overlap = 80 # to change if needed
     conda:
-        'envs/biopy.yaml'
+        config['softparams']['conda']['biopy']
     script:
         'scripts/consolidate_snake.py'
 
@@ -112,7 +112,7 @@ rule dereplicate:
         partial = True,
         makesym = True
     conda:
-        'envs/biopy.yaml'
+        config['softparams']['conda']['biopy']
     script:
         'scripts/dereplicate_snake.py'
 

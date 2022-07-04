@@ -27,7 +27,7 @@ rule cat_contigs:
     threads:
         1
     conda:
-        "envs/vamb.yaml"
+        config['softparams']['conda']['vamb']
     shell:
         "concatenate.py {output} {input} -m 1000"
 
@@ -43,7 +43,7 @@ rule minimap2_index:
     params:
         index_size = '12G'
     conda: 
-        'envs/mapping.yaml'
+        config['softparams']['conda']['minimap2']
     shell:
         "minimap2 -I {params.index_size} -d {output} {input} 2> {log}"
 
@@ -57,7 +57,7 @@ rule samtools_dict:
     log:
         'logs/vamb.samtools.dict.log'
     conda:
-        'envs/mapping.yaml'
+        config['softparams']['conda']['samtools']
     shell:
         "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
 
@@ -74,7 +74,7 @@ rule minimap2_mapping:
     log:
         'logs/vamb.minimap2.mapping.{sample}.log'
     conda:
-        'envs/mapping.yaml'
+        config['softparams']['conda']['minimap2']
     shell:
         'minimap2 -t {threads} -ax sr {input.mmi} {input.r1} {input.r2} -N 5 | grep -v "^@" | cat {input.sdict} - | samtools view -F 3584 -b - > {output} 2> {log}'
 
@@ -90,7 +90,7 @@ rule samtools_sort:
     log:
         'logs/vamb.samtools.sort.{sample}.log'
     conda:
-        'envs/mapping.yaml'
+        config['softparams']['conda']['samtools']
     shell:
         "samtools sort {input} -T {params.prefix} --threads {threads} -m 3G -o {output} 2> {log}"
 
@@ -104,7 +104,7 @@ rule jgi_depth:
     log:
         'logs/vamb.jgi.{sample}.log'
     conda:
-        'envs/metabat2.yaml'
+        config['softparams']['conda']['metabat2']
     shell:
         "jgi_summarize_bam_contig_depths --noIntraDepthVariance --outputDepth {output} {input} 2>{log}"
 
@@ -147,7 +147,7 @@ rule vamb:
     threads:
         8
     conda:
-        'envs/vamb.yaml'
+        config['softparams']['conda']['vamb']
     shell:
         'rm -r {output.di} && vamb --outdir {output.di} --fasta {input.contigs} --jgi {input.jgi} {params.vamb_params} 2> {log}'
 
@@ -163,7 +163,7 @@ rule parse_vamb:
         samples = SAMPLES,
         binsdir = 'binning/vamb' #switching directory
     conda:
-        'envs/biopy.yaml'
+        config['softparams']['conda']['biopy']
     script:
         'scripts/parse_vamb.py'
 

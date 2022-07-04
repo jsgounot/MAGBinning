@@ -9,7 +9,7 @@ rule contig_depth:
     output:
         "data/mapping/short/{sample}/{sample}.jgi_depth_nidv"
     conda:
-        "envs/metabat2.yaml"
+        config['softparams']['conda']['metabat2']
     log:
         "logs/{sample}.metabat2.log"
     shell:
@@ -37,7 +37,7 @@ rule genkmer:
     output:
         'binning/metabinner/{sample}/raw/run/kmer_4_f1000.csv'
     conda:
-        'envs/metabinner.yaml'
+        config['softparams']['conda']['metabinner']
     shell:
         'python $(dirname $(which run_metabinner.sh))/scripts/gen_kmer.py {input} 1000 4'
 
@@ -51,7 +51,7 @@ rule run:
     params:
         outdir = 'binning/metabinner/{sample}/raw/run'
     conda:
-        "envs/metabinner.yaml"
+        config['softparams']['conda']['metabinner']
     threads:
         8
     log:

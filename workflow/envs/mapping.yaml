@@ -5,3 +5,4 @@ dependencies:
   - bwa 
   - minimap2 
   - samtools
+  - picard

@@ -52,7 +52,7 @@ rule reassembly_bin_hybrid_unicycler:
     log:
         'logs/{sample}.{binner}.{binidx}.unicycler.long.log'
     conda:
-        'envs/unicycler.yaml'
+        config['softparams']['conda']['unicycler']
     threads:
         48
     resources:
@@ -72,7 +72,7 @@ rule reassembly_bin_short_unicycler:
     log:
         'logs/{sample}.{binner}.{binidx}.unicycler.short.log'
     conda:
-        'envs/unicycler.yaml'
+        config['softparams']['conda']['unicycler']
     threads:
         48
     resources:

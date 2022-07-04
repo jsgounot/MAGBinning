@@ -67,7 +67,7 @@ rule checkm_lineage:
     log:
         "logs/{binner}.{sample}.{postbinning}.quality.checkm.log"
     conda:
-        "envs/checkm.yaml"
+        config['softparams']['conda']['checkm']
     shell: 
         "checkm lineage_wf -t {threads} -x checkminput {params.bindir} {params.outdir} &> {log}"
 
@@ -81,7 +81,7 @@ rule checkm_quality:
     log:
         "logs/{binner}.{sample}.{postbinning}.quality.checkm.log"
     conda:
-        "envs/checkm.yaml"
+        config['softparams']['conda']['checkm']
     shell: 
         "checkm qa -o 2 {input} {params.outdir} > {output} 2>> {log}"
 
@@ -114,7 +114,7 @@ rule barrnap:
     output:
         "binning/{binner}/{sample}/{postbinning}/quality/barrnap/check.empty"
     conda:
-        "envs/rna_tools.yaml"
+        config['softparams']['conda']['barrnap']
     params:
         "binning/{binner}/{sample}/{postbinning}/quality/barrnap"
     log:
@@ -139,7 +139,7 @@ rule trnaScanSe_arch:
     output:
         'binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/arch/sample.{idx}.trnascan.res.txt'
     conda:
-        "envs/rna_tools.yaml"
+        config['softparams']['conda']['trnascanse']
     shell:
         'tRNAscan-SE -A -Q -o {output} {input}'
 
@@ -149,7 +149,7 @@ rule trnaScanSe_bact:
     output:
         'binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/bact/sample.{idx}.trnascan.res.txt'
     conda:
-        "envs/rna_tools.yaml"
+        config['softparams']['conda']['trnascanse']
     shell:
         'tRNAscan-SE -B -Q -o {output} {input}'
 
@@ -197,7 +197,7 @@ rule gunc:
     threads:
         8
     conda:
-        'envs/gunc.yaml'
+        config['softparams']['conda']['gunc']
     log:
         "logs/{binner}.{sample}.{postbinning}.quality.gunc.log"
     shell:

@@ -1,0 +1,18 @@
+{
+    "barrnap"   : "envs/binqual.yaml",
+    "biopy"     : "envs/biopy.yaml",
+    "bwa"       : "envs/mapping.yaml",
+    "checkm"    : "envs/binqual.yaml",
+    "concoct"   : "envs/binners.yaml",
+    "gunc"      : "envs/binqual.yaml",
+    "megahit"   : "envs/assemblers.yaml",
+    "maxbin2"   : "envs/binners.yaml",
+    "metabat2"  : "envs/binners.yaml",
+    "minimap2"  : "envs/mapping.yaml",
+    "operams"   : "envs/operams.yaml",
+    "picard"    : "envs/mapping.yaml",
+    "samtools"  : "envs/mapping.yaml",
+    "trnascanse": "envs/binqual.yaml",
+    "unicycler" : "envs/assemblers.yaml",
+    "vamb"      : "envs/vamb.yaml"
+}
