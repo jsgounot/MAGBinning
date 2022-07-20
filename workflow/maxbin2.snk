@@ -14,7 +14,7 @@ rule run:
         wa = "data/assemblies/{sample}/{sample}.assemblies.fa",
         de = "data/mapping/short/{sample}/{sample}.maxbin.abundance.tsv"
     output:
-        "binning/maxbin2/{sample}/raw/run/{sample}.bin.summary"
+        touch("binning/maxbin2/{sample}/raw/run/{sample}.check")
     params:
         outname = "binning/maxbin2/{sample}/raw/run/{sample}.bin"
     conda:
@@ -24,11 +24,11 @@ rule run:
     threads:
         8
     shell:
-        "run_MaxBin.pl -contig {input.wa} -thread {threads} -out {params.outname} -abund1 {input.de} > {log} 2>&1"
+        "(run_MaxBin.pl -contig {input.wa} -thread {threads} -out {params.outname} -abund1 {input.de} > {log} 2>&1) || true"
 
 rule listbins:
     input:
-        "binning/maxbin2/{sample}/raw/run/{sample}.bin.summary"
+        rules.run.output
     output:
         "binning/maxbin2/{sample}/raw/binlist.txt"
     params:

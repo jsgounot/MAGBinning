@@ -7,9 +7,10 @@
 
 import glob, os
 from itertools import product
+from collections import defaultdict
 
 SAMPLES = [sample for sample in config if sample != 'softparams']
-TDATA = {}
+TDATA = defaultdict(dict)
 
 checkpoint binqual_entry:
     input:

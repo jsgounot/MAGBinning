@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2021-10-21 22:14:19
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-05-31 10:54:46
+# @Last Modified time: 2022-07-15 10:55:22
 
 """
 This is a new version of the metaWrap script `binning_refiner.py` (1), itself coming from the 
@@ -143,11 +143,17 @@ def process(binlists, outdir, minsize=524288, decompose=True, ncore=1):
     df = None
     for idx, binlist in enumerate(binlists):
         fastas = extract_fnames(binlist)
-        sdf = process_fasta_ncore(fastas, ncore)
 
-        # Order and rename columns
-        sdf = sdf[['seqid', 'filename', 'seqlen', 'seqhash']]
-        sdf.columns = ['contig', 'filename_' + str(idx), 'seqlen_' + str(idx), 'seqhash_' + str(idx)]
+        # one of the binners returns nothing
+        if not fastas: 
+            sdf = pd.DataFrame(columns=['contig', 'filename_' + str(idx), 'seqlen_' + str(idx), 'seqhash_' + str(idx)])
+
+        else:
+            sdf = process_fasta_ncore(fastas, ncore)
+            # Order and rename columns
+            sdf = sdf[['seqid', 'filename', 'seqlen', 'seqhash']]
+            sdf['seqhash'] = sdf['seqhash'].astype(str)
+            sdf.columns = ['contig', 'filename_' + str(idx), 'seqlen_' + str(idx), 'seqhash_' + str(idx)]
 
         # We merge contigs found in all binners
         if df is None: df = sdf
@@ -161,6 +167,7 @@ def process(binlists, outdir, minsize=524288, decompose=True, ncore=1):
     hashcols = ['seqhash_' + str(idx) for idx in range(len(binlists))]
     df['hunique'] = df[hashcols].nunique(axis=1) == 1
     sdf = df[~ df['hunique']]
+
     if not sdf.empty:
         raise Exception('Some contig sequence from different binners does not look the same !! \n ' + sdf)
 

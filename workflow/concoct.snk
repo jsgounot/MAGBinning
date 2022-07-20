@@ -73,6 +73,17 @@ rule extract:
     shell:
         'extract_fasta_bins.py {input.original} {input.merge} --output_path {params}'
 
+rule renames:
+    input:
+        original = 'binning/concoct/{sample}/raw/run/check.empty'
+    output:
+        touch('binning/concoct/{sample}/raw/bins/check.empty')
+    params:
+        raws = 'binning/concoct/{sample}/raw/run/*.fa',
+        bind = 'binning/concoct/{sample}/raw/bins/{sample}'
+    shell:
+        'for fname in {params.raws}; do ln -s $(pwd)/$fname {params.bind}.${{fname##*/}}; done '
+
 def agg_concoct(wildcard):
     # we need to check here that the filtered fasta file is not empty
     # if it is empty, we skip the concoct process
@@ -80,7 +91,7 @@ def agg_concoct(wildcard):
     fasta = checkpoints.link_assembly.get(** wildcard).output[0]
     
     if os.stat(fasta).st_size != 0 : 
-        return 'binning/concoct/{sample}/raw/run/check.empty'
+        return 'binning/concoct/{sample}/raw/bins/check.empty'
     else:
         return 'empty_file.tmp'
 
@@ -90,6 +101,6 @@ rule softlink:
     output:
         "binning/concoct/{sample}/raw/binlist.txt"
     params:
-        fasta = "binning/concoct/{sample}/raw/run/[0-9]*.fa",
+        fasta = "binning/concoct/{sample}/raw/bins/{sample}.[0-9]*.fa",
     shell:
         "ls -d $(pwd)/{params.fasta} 1> {output} 2>/dev/null || true"

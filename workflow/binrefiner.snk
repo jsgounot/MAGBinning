@@ -13,11 +13,19 @@
 # dereplicated bins which does not pass the checkM thresholds - and then find a solution to rearrange them to
 # to reinclude them in the dataset, but this seems complexe and deserve proper investigation before implementation.
 
+def check_empty(fname):
+    with open(fname) as f:
+        for line in f:
+            if line.strip():
+                return False
+    return True
+
 def agg_checkm_refiner(wildcard):
     # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
     binlist = checkpoints.merge.get(sample=wildcard.sample).output[wildcard.group]
-    if os.stat(binlist) != 0 : return "binning/refined/{sample}/raw/generate/{group}/checkm/eval.tsv"
-    return binlist
+    # print (binlist, os.stat(binlist), check_empty(binlist))
+    if not check_empty(binlist) : return "binning/refined/{sample}/raw/generate/{group}/checkm/eval.tsv"
+    return 'empty_file.tmp'
 
 checkpoint merge:
     input:
@@ -109,6 +117,7 @@ rule dereplicate:
     output:
         'binning/refined/{sample}/raw/dereplicate/binlist.txt'
     params:
+        basename = lambda wc: wc.sample + '.',
         partial = True,
         makesym = True
     conda:

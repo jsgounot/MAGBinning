@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2021-10-28 15:24:07
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-05-31 13:33:08
+# @Last Modified time: 2022-07-20 09:56:55
 
 """
 Adapted version of the metaWrap script: https://github.com/bxlab/metaWRAP/blob/master/bin/metawrap-scripts/dereplicate_contigs_in_bins.py
@@ -30,7 +30,7 @@ def touch(fname):
     with open(fname, 'w') as f:
         pass
 
-def process(checkmfile, outdir, partial=True, makesym=True):
+def process(checkmfile, outdir, basename=None, partial=True, makesym=True):
     df = pd.read_csv(checkmfile, sep='\t')
 
     if df.empty:
@@ -63,7 +63,8 @@ def process(checkmfile, outdir, partial=True, makesym=True):
     # if not partial, we keep the sdf which contains all the duplicates (count > 1)
     # we can now remove data
     torm = sdf.groupby('NewID')['contig'].apply(set)
-    makefname = lambda binid: os.path.join(outdir, 'bin.' + str(binid) + '.fa')
+    basename = basename or ''
+    makefname = lambda binid: os.path.join(outdir, basename + 'bin.' + str(binid) + '.fa')
     outfiles = []
 
     for binid, fname in zip(df['NewID'], df['binfname']):
@@ -77,6 +78,7 @@ def process(checkmfile, outdir, partial=True, makesym=True):
 
         elif makesym:
             fname = make_abspath_check(fname)
+            if os.path.isfile(outfname): os.remove(outfname)
             os.symlink(fname, outfname)
 
         else:
@@ -104,6 +106,10 @@ if __name__ == '__main__':
     parser.add_argument('-outdir',
                         required=True,
                         help='Path to outdir')
+
+    parser.add_argument('-basename',
+                        required=False,
+                        help='Outfile basename')
 
     parser.add_argument('-partial',
                         action='store_true',

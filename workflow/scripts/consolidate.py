@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2021-10-26 22:05:51
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-05-31 14:24:46
+# @Last Modified time: 2022-07-19 17:09:29
 
 """
 Part of the MetaWRAP binrefiner module: https://github.com/bxlab/metaWRAP
@@ -52,8 +52,12 @@ def extract_contigs(checkm_df):
 def load_initial_data(checkm_result, contig_data, checkm_data, prefilter):
     print ('Reading checkM file: ' + checkm_result)
 
-    df = pd.read_csv(checkm_result, sep='\t', index_col=0)
-    
+    try:
+        df = pd.read_csv(checkm_result, sep='\t', index_col=0)
+    except pd.errors.EmptyDataError:
+        columns = ['ID', 'Completness', 'Contamination', 'Size', '#Contigs', 'Contig_N50', 'Longest_contig', 'CheckMStatus']
+        df = pd.DataFrame(columns=columns)
+
     if prefilter:
         sdf = df[(df['Contamination'] < 10) & (df['Completness'] > 70)]
         print ('%i bins total and %i passing the filters' %(df['ID'].nunique(), sdf['ID'].nunique()))
@@ -164,6 +168,7 @@ def save_contigs(finaldf, outdir):
     for binid, sfname, newid in zip(finaldf['ID'], finaldf['Source'], finaldf['NewID']):
         binfile = make_bin_path(binid, sfname)
         outfile = os.path.join(outdir, 'bin.' + str(newid) + '.fa')
+        if os.path.isfile(outfile): os.remove(outfile)
         os.symlink(binfile, outfile)
         idx += 1
 

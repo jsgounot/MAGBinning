@@ -9,6 +9,8 @@ import os, glob, json
 for sample, sdata in config.items():
     sdata['assembly'] = f'assembly/completed/megahit/{sample}.fa'
 
+# config = {sample: config[sample] for sample in list(config)[:3]}
+
 # ----------------------------------------------------------------------------------------------------
 # UPDATE THIS PART WITH YOUR CONFIGURATION
 
@@ -27,7 +29,11 @@ with open(fname) as f:
 
 rule all:
     input:
-        'binning/metabat2/quality_data/raw/tables/bins_info.tsv'
+        'binning/metabat2/quality_data/raw/tables/bins_info.tsv',
+        'binning/maxbin2/quality_data/raw/tables/bins_info.tsv',
+        'binning/concoct/quality_data/raw/tables/bins_info.tsv',
+        'binning/refined/quality_data/raw/tables/bins_info.tsv',
+        'binning/vamb/quality_data/raw/tables/bins_info.tsv',
 
 rule temp_empty:
     output:
