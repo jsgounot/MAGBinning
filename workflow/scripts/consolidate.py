@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2021-10-26 22:05:51
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-07-19 17:09:29
+# @Last Modified time: 2022-07-21 15:26:31
 
 """
 Part of the MetaWRAP binrefiner module: https://github.com/bxlab/metaWRAP
@@ -11,7 +11,7 @@ Adapted from this script: https://github.com/bxlab/metaWRAP/blob/master/bin/meta
 Summary:
 This script look for the best bins among a group of bins with an iterative process
 1. Will pairwise compare bins and define two bins are similar if they share x (default 80%) similarity (see note A)
-2. Will select the bin with the best completness and contamination based on the formula: completness - contamination * 5
+2. Will select the bin with the best completeness and contamination based on the formula: completeness - contamination * 5
 
 Note:
 A. Similar to the refiner script, this process assumes that bins are coming from the same assembly and that contig sharing the same
@@ -55,11 +55,11 @@ def load_initial_data(checkm_result, contig_data, checkm_data, prefilter):
     try:
         df = pd.read_csv(checkm_result, sep='\t', index_col=0)
     except pd.errors.EmptyDataError:
-        columns = ['ID', 'Completness', 'Contamination', 'Size', '#Contigs', 'Contig_N50', 'Longest_contig', 'CheckMStatus']
+        columns = ['ID', 'Completeness', 'Contamination', 'Size', '#Contigs', 'Contig_N50', 'Longest_contig', 'CheckMStatus']
         df = pd.DataFrame(columns=columns)
 
     if prefilter:
-        sdf = df[(df['Contamination'] < 10) & (df['Completness'] > 70)]
+        sdf = df[(df['Contamination'] < 10) & (df['Completeness'] > 70)]
         print ('%i bins total and %i passing the filters' %(df['ID'].nunique(), sdf['ID'].nunique()))
     else:
         sdf = df
@@ -70,7 +70,7 @@ def load_initial_data(checkm_result, contig_data, checkm_data, prefilter):
     contig_data[checkm_result] = extract_contigs(sdf)
 
 def extract_best(row):
-    names = {'ID': 'binID', 'Completness': 'completness', 'Contamination': 'contamination', 'Source': 'source'}
+    names = {'ID': 'binID', 'Completeness': 'completeness', 'Contamination': 'contamination', 'Source': 'source'}
     suffix = '_B' if row['better_B'] else '_A'
     return pd.Series({name: row[cname + suffix] for name, cname in names.items()})
 
@@ -99,20 +99,20 @@ def pairwise_process(checkm_result_A, checkm_result_B, contig_data, checkm_data,
     mdf = mdf[mdf['bestRatio'] >= 80]   
 
     # We keep the bins which are not overlapping to add them later
-    cMdfA_notfound = cMdfA[~ cMdfA['ID'].isin(mdf['binID_A'])][['ID', 'Completness', 'Contamination', 'Source']]
-    cMdfB_notfound = cMdfB[~ cMdfB['ID'].isin(mdf['binID_B'])][['ID', 'Completness', 'Contamination', 'Source']]
+    cMdfA_notfound = cMdfA[~ cMdfA['ID'].isin(mdf['binID_A'])][['ID', 'Completeness', 'Contamination', 'Source']]
+    cMdfB_notfound = cMdfB[~ cMdfB['ID'].isin(mdf['binID_B'])][['ID', 'Completeness', 'Contamination', 'Source']]
 
     # Adding checkM values in the table for bins set A
-    sdf = cMdfA[['ID', 'Completness', 'Contamination', 'Source']]
-    sdf.columns = ['binID_A', 'completness_A', 'contamination_A', 'source_A']
+    sdf = cMdfA[['ID', 'Completeness', 'Contamination', 'Source']]
+    sdf.columns = ['binID_A', 'completeness_A', 'contamination_A', 'source_A']
     mdf = mdf.merge(sdf, on='binID_A')
-    mdf['score_A'] = mdf['completness_A'] - mdf['contamination_A'] * 5
+    mdf['score_A'] = mdf['completeness_A'] - mdf['contamination_A'] * 5
 
     # Adding checkM values in the table for bins set B
-    sdf = cMdfB[['ID', 'Completness', 'Contamination', 'Source']]
-    sdf.columns = ['binID_B', 'completness_B', 'contamination_B', 'source_B']
+    sdf = cMdfB[['ID', 'Completeness', 'Contamination', 'Source']]
+    sdf.columns = ['binID_B', 'completeness_B', 'contamination_B', 'source_B']
     mdf = mdf.merge(sdf, on='binID_B')
-    mdf['score_B'] = mdf['completness_B'] - mdf['contamination_B'] * 5
+    mdf['score_B'] = mdf['completeness_B'] - mdf['contamination_B'] * 5
 
     # We select the overlapping bin for each binID_A which have the best score
     # and compare this value to the binA score to select which bin we want to conserve
@@ -141,7 +141,7 @@ def reconstruct_checkm_results(finaldf, checkm_data):
         return sdf[sdf['ID'].isin(binids)]
 
     if not found:
-        return pd.DataFrame(columns=['Source', 'ID', 'NewID', 'Completness', 
+        return pd.DataFrame(columns=['Source', 'ID', 'NewID', 'Completeness', 
             'Contamination', 'Contig_N50'])
 
     sdf = pd.concat((extract_sub(source, binids, checkm_data)
