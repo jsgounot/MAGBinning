@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2022-07-25 16:00:51
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-07-27 18:14:27
+# @Last Modified time: 2022-07-29 10:30:50
 
 '''
 Checkm2 does not return the ['Size', '#Contigs', 'Contig_N50', 'Longest_contig'] like checkm.
@@ -44,7 +44,7 @@ def fasta_info(fname):
     if rec: l.append(len(''.join(rec)))
 
     return {
-        'ID': os.path.splitext(os.path.basename(fname))[0],
+        'ID': os.path.basename(fname),
         'Size' : sum(l),
         '#Contigs': len(l),
         'Contig_N50': getn50(l),
@@ -54,6 +54,16 @@ def retrieve_finfo(binlist):
     with open(binlist) as f:
         return pd.DataFrame(fasta_info(fname.strip())
         for fname in f)
+
+def get_fa_id(binlist):
+    with open(binlist) as f:
+        d = {}
+        for fname in f :
+            fname = fname.strip()
+            if not fname: continue
+            bname = os.path.basename(fname)
+            d[os.path.splitext(bname)[0]] = bname
+        return d
 
 def load_quality_report(quality_report) :
 
@@ -89,6 +99,8 @@ if os.path.basename(report) == "empty_file.tmp":
     exit(0)
 else:
     df = load_quality_report(report)
+    gfi = get_fa_id(binlist)
+    df['ID'] = df['ID'].apply(lambda mid: gfi[mid])
     sdf = retrieve_finfo(binlist)
     df = df.merge(sdf, on='ID', how='left')
 

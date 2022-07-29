@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2021-10-26 22:05:51
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-07-26 15:32:18
+# @Last Modified time: 2022-07-29 10:40:25
 
 """
 Part of the MetaWRAP binrefiner module: https://github.com/bxlab/metaWRAP
@@ -31,9 +31,19 @@ from Bio import SeqIO
 
 dname = os.path.dirname
 
+def make_bin_path(binid, checkrpath):
+    binid = os.path.splitext(binid)[0]
+    fname = os.path.join(dname(dname(checkrpath)), 'checkm', 'inputs', binid + '.checkminput')
+    fname = pathlib.Path(fname)
+    fname = str(fname.absolute())
+
+    if not os.path.isfile(fname):
+        raise OSError('Unable tor retrieve fname: ' + fname)
+
+    return fname
+
 def extract_contigs(checkm_df):
     binsinfo = []
-    make_bin_path = lambda binid, checkrpath: os.path.join(dname(dname(checkrpath)), 'checkm', 'inputs', binid + '.checkminput')
 
     for binid, sfname in zip(checkm_df['ID'], checkm_df['Source']):
         binfile = make_bin_path(binid, sfname)
@@ -153,16 +163,6 @@ def reconstruct_checkm_results(finaldf, checkm_data):
 
 def save_contigs(finaldf, outdir):
     
-    def make_bin_path(binid, checkrpath):
-        fname = os.path.join(dname(dname(checkrpath)), 'checkm', 'inputs', binid + '.checkminput')
-        fname = pathlib.Path(fname)
-        fname = str(fname.absolute())
-
-        if not os.path.isfile(fname):
-            raise OSError('Unable tor retrieve fname: ' + fname)
-
-        return fname
-
     idx = 1
 
     for binid, sfname, newid in zip(finaldf['ID'], finaldf['Source'], finaldf['NewID']):
