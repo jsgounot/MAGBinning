@@ -18,6 +18,9 @@ config['softparams'] = {
         'gunc_db' : "/mnt/volume1/Projects/MAGBinning/database/gunc/gunc_db_progenomes2.1.dmnd"
     }
 
+config['softparams']['checkm_dir'] = 'checkm2'
+config['softparams']['checkm2'] = '/home/ubuntu/Software/checkm2/checkm2/bin/checkm2'
+
 # ----------------------------------------------------------------------------------------------------
 # CONDA CONFIGURATION
 

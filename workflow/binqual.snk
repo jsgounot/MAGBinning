@@ -41,70 +41,18 @@ rule bincov:
 # ------------------------------------------------------------------------------------
 # Checkm
 
-rule prepare_checkm:
-    input:
-        "binning/{binner}/{sample}/{postbinning}/binlist.txt"
-    output:
-        touch("binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/check.empty")
-    params:
-        "binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/"
-    shell:
-        'while read fname; do ln -s $fname {params}/$(basename $fname).checkminput; done < $"{input}"'
+module checkm:
+    snakefile: "checkm.snk"
+    config: config
 
-rule checkm_lineage:
-    input:
-        "binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/check.empty"
-    output:
-        "binning/{binner}/{sample}/{postbinning}/quality/checkm/lineage.ms"
-    params:
-        bindir = "binning/{binner}/{sample}/{postbinning}/quality/checkm/inputs/",
-        outdir = "binning/{binner}/{sample}/{postbinning}/quality/checkm"
-    threads:
-        8
-    resources:
-         mem_mb = 35000 #35G for pplacer
-    priority: 
-        1
-    log:
-        "logs/{binner}.{sample}.{postbinning}.quality.checkm.log"
-    conda:
-        config['softparams']['conda']['checkm']
-    shell: 
-        "checkm lineage_wf -t {threads} -x checkminput {params.bindir} {params.outdir} &> {log}"
+use rule * from checkm as checkm_*
 
-rule checkm_quality:
-    input :
-        "binning/{binner}/{sample}/{postbinning}/quality/checkm/lineage.ms"
-    output:
-        "binning/{binner}/{sample}/{postbinning}/quality/checkm/eval.tsv"
-    params:
-        outdir = "binning/{binner}/{sample}/{postbinning}/quality/checkm"
-    log:
-        "logs/{binner}.{sample}.{postbinning}.quality.checkm.log"
-    conda:
-        config['softparams']['conda']['checkm']
-    shell: 
-        "checkm qa -o 2 {input} {params.outdir} > {output} 2>> {log}"
-
-def agg_checkm(wildcard):
-    # We need to make a conditional execution here specific to checkM
-    # since these results are also requiered by binrefiner.snk
-
-    binlist = checkpoints.binqual_entry.get(** wildcard).output[0]
-    
-    if os.stat(binlist).st_size != 0 : 
-        return 'binning/{binner}/{sample}/{postbinning}/quality/checkm/eval.tsv'
-    else:
-        return 'empty_file.tmp'
-
-rule checkm_parse:
-    input:
-        #'binning/{binner}/{sample}/{postbinning}/quality/checkm/eval.tsv'
-        agg_checkm
-    output :
-        "binning/{binner}/{sample}/{postbinning}/quality/checkm/results.tsv"
-    script:
-        "scripts/parse_checkm.py"
+def checkm_input(wc):
+    checkm = config['softparams']['checkm_dir']
+    return os.path.join(
+            'binning/{binner}/{sample}/{postbinning}/quality',
+            checkm, 'results.tsv'
+        )
 
 # ------------------------------------------------------------------------------------
 # Barrnap
@@ -219,7 +167,7 @@ rule gunc_parse:
 rule create_bininfo:
     input:
         bincov   = "binning/{binner}/{sample}/{postbinning}/bincov.tsv",
-        checkm   = "binning/{binner}/{sample}/{postbinning}/quality/checkm/results.tsv",
+        checkm   = checkm_input,
         barrnap  = "binning/{binner}/{sample}/{postbinning}/quality/barrnap/results.tsv",
         trnascan = "binning/{binner}/{sample}/{postbinning}/quality/trnaScanSe/results.tsv",
         gunc     = "binning/{binner}/{sample}/{postbinning}/quality/gunc/result.tsv",

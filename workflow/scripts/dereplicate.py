@@ -2,7 +2,7 @@
 # @Author: jsgounot
 # @Date:   2021-10-28 15:24:07
 # @Last Modified by:   jsgounot
-# @Last Modified time: 2022-07-20 09:56:55
+# @Last Modified time: 2022-07-26 15:32:51
 
 """
 Adapted version of the metaWrap script: https://github.com/bxlab/metaWRAP/blob/master/bin/metawrap-scripts/dereplicate_contigs_in_bins.py
@@ -38,7 +38,7 @@ def process(checkmfile, outdir, basename=None, partial=True, makesym=True):
         touch(outfile)
         exit(0)
 
-    df['score'] = df['Completness'] - 5 * df['Contamination'] + df['Contig_N50'] * 1e-10
+    df['score'] = df['Completeness'] - 5 * df['Contamination'] + df['Contig_N50'] * 1e-10
     
     directory = os.path.dirname(checkmfile)
     df['binfname'] = df['NewID'].apply(lambda binid: os.path.join(directory, 'bin.' + str(binid) + '.fa'))

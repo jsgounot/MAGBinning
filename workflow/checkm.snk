@@ -1,0 +1,123 @@
+import glob
+
+rule link_checkm_1:
+    input: 
+        'binning/{binner}/{sample}/{postbinning}/binlist.txt'
+    output:
+        'binning/{binner}/{sample}/{postbinning}/checkm/binlist.txt'
+    shell:
+        'ln -s $(pwd)/{input} {output}'
+
+rule link_checkm_2:
+    input: 
+        'binning/refined/{sample}/raw/generate/{group}/binlist.tsv'
+    output:
+        'binning/refined/{sample}/raw/generate/{group}/checkm/binlist.txt'
+    shell:
+        'ln -s $(pwd)/{input} {output}'
+
+checkpoint prepare:
+    input:
+        '{prefix}/checkm/binlist.txt'
+    output:
+        directory('{prefix}/checkm/inputs')
+    params:
+        ext = 'checkminput'
+    script:
+        'scripts/bin2symlinks.py'
+
+rule lineage:
+    input:
+        rules.prepare.output
+    output:
+        '{prefix}/checkm/lineage.ms'
+    params:
+        bindir = '{prefix}/checkm/inputs/',
+        outdir = '{prefix}/checkm/outdir'
+    threads:
+        8
+    resources:
+         mem_mb = 35000 #35G for pplacer
+    priority: 
+        1
+    log:
+        '{prefix}/checkm/lineage.log'
+    conda:
+        config['softparams']['conda']['checkm']
+    shell: 
+        "checkm lineage_wf -t {threads} -x checkminput {params.bindir} {params.outdir} &> {log}"
+
+rule quality:
+    input :
+        rules.lineage.output
+    output:
+        "{prefix}/checkm/outdir/eval.tsv"
+    params:
+        outdir = '{prefix}/checkm/outdir'
+    log:
+        '{prefix}/checkm/quality.log'
+    conda:
+        config['softparams']['conda']['checkm']
+    shell: 
+        "checkm qa -o 2 {input} {params.outdir} > {output} 2>> {log}"
+
+rule checkm2:
+    input:
+        rules.prepare.output
+    output:
+        '{prefix}/checkm2/quality_report.tsv'
+    params:
+        inputs = '{prefix}/checkm/inputs/*.checkminput',
+        outdir = '{prefix}/checkm2/',
+        exe    = config['softparams']['checkm2']
+    threads:
+        8
+    log:
+        '{prefix}/checkm2/run.log'
+    conda:
+        config['softparams']['conda']['checkm2']
+    shell:
+        '{params.exe} predict -i {params.inputs} -o {params.outdir} --threads {threads} --force'
+
+def agg_checkm(wildcard):
+    # We need to make a conditional execution here specific to checkM
+    # since these results are also requiered by binrefiner.snk
+
+    directory = checkpoints.prepare.get(** wildcard).output[0]
+    fnames = glob.glob(os.path.join(directory, '*.checkminput'))
+
+    if fnames: 
+        return '{prefix}/checkm/outdir/eval.tsv'
+    else:
+        return 'empty_file.tmp'
+
+rule parse_checkm:
+    input:
+        agg_checkm
+    output :
+        "{prefix}/checkm/results.tsv"
+    script:
+        "scripts/parse_checkm.py"
+
+def agg_checkm2(wildcard):
+    # We need to make a conditional execution here specific to checkM
+    # since these results are also requiered by binrefiner.snk
+
+    directory = checkpoints.prepare.get(** wildcard).output[0]
+    fnames = glob.glob(os.path.join(directory, '*.checkminput'))
+
+    if fnames: 
+        return '{prefix}/checkm2/quality_report.tsv'
+    else:
+        return 'empty_file.tmp'
+
+rule parse_checkm2:
+    input:
+        report = agg_checkm2,
+        binlist = '{prefix}/checkm/binlist.txt'
+    output :
+        '{prefix}/checkm2/results.tsv'
+    params:
+        bindir = '{prefix}/checkm/inputs'
+    script:
+        'scripts/parse_checkm2.py'

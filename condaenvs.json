@@ -3,6 +3,7 @@
     "biopy"     : "envs/biopy.yaml",
     "bwa"       : "envs/mapping.yaml",
     "checkm"    : "envs/binqual.yaml",
+    "checkm2"   : "checkm2",
     "concoct"   : "envs/binners.yaml",
     "gunc"      : "envs/binqual.yaml",
     "megahit"   : "envs/assemblers.yaml",

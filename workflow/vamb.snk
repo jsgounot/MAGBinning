@@ -145,11 +145,11 @@ rule vamb:
     log:
         'logs/vamb.log'
     threads:
-        8
+        workflow.cores
     conda:
         config['softparams']['conda']['vamb']
     shell:
-        'rm -r {output.di} && vamb --outdir {output.di} --fasta {input.contigs} --jgi {input.jgi} {params.vamb_params} 2> {log}'
+        'rm -r {output.di} && vamb -p {threads} --outdir {output.di} --fasta {input.contigs} --jgi {input.jgi} {params.vamb_params} 2> {log}'
 
 rule parse_vamb:
     input:

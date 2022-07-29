@@ -27,7 +27,7 @@ def agg_checkm_refiner(wildcard):
     if not check_empty(binlist) : return "binning/refined/{sample}/raw/generate/{group}/checkm/eval.tsv"
     return 'empty_file.tmp'
 
-checkpoint merge:
+rule merge:
     input:
         'binning/maxbin2/{sample}/raw/binlist.txt',
         'binning/metabat2/{sample}/raw/binlist.txt',
@@ -44,64 +44,36 @@ checkpoint merge:
     script:
         'scripts/refiner_snake.py'
 
-rule prepare_checkm:
-    input:
-        "binning/refined/{sample}/raw/generate/{group}/binlist.tsv"
-    output:
-        touch("binning/refined/{sample}/raw/generate/{group}/checkm/inputs/check.empty")
-    params:
-        "binning/refined/{sample}/raw/generate/{group}/checkm/inputs/"
-    shell:
-        'while read fname; do ln -s $fname {params}/$(basename $fname).checkminput; done < $"{input}"'
+# ------------------------------------------------------------
 
-rule checkm_lineage:
-    input:
-        "binning/refined/{sample}/raw/generate/{group}/checkm/inputs/check.empty"
-    output:
-        "binning/refined/{sample}/raw/generate/{group}/checkm/lineage.ms"
-    params:
-        bindir = "binning/refined/{sample}/raw/generate/{group}/checkm/inputs/",
-        outdir = "binning/refined/{sample}/raw/generate/{group}/checkm"
-    threads:
-        8
-    resources:
-         mem_mb = 35000 #35G for pplacer
-    priority: 
-        1
-    log:
-        "logs/refined.{sample}.{group}.raw.quality.checkm.log"
-    conda:
-        config['softparams']['conda']['checkm']
-    shell: 
-        "checkm lineage_wf -t {threads} -x checkminput {params.bindir} {params.outdir} &> {log}"
+module checkm:
+    snakefile: "checkm.snk"
+    config: config
 
-rule checkm_quality:
-    input :
-        "binning/refined/{sample}/raw/generate/{group}/checkm/lineage.ms"
-    output:
-        "binning/refined/{sample}/raw/generate/{group}/checkm/eval.tsv"
-    params:
-        outdir = "binning/refined/{sample}/raw/generate/{group}/checkm"
-    log:
-        "logs/refined.{sample}.{group}.raw.quality.checkm.log"
-    conda:
-        config['softparams']['conda']['checkm']
-    shell: 
-        "checkm qa -o 2 {input} {params.outdir} > {output} 2>> {log}"
+use rule * from checkm as checkm_*
 
-rule checkm_parse:
-    input:
-        agg_checkm_refiner
-        # "binning/refined/{sample}/generate/{group}/checkm/eval.tsv"
-    output :
-        "binning/refined/{sample}/raw/generate/{group}/checkm/results.tsv"
-    script:
-        "scripts/parse_checkm.py"
+def checkm_input_groups(wc):
+    checkm = config['softparams']['checkm_dir']
+    return expand(os.path.join(
+            'binning/refined/{sample}/raw/generate/{group}',
+            checkm, 'results.tsv'
+        ), sample=wc.sample, group=('AB', 'AC', 'BC', 'ABC')
+    )
+
+def checkm_input_binners(wc):
+    checkm = config['softparams']['checkm_dir']
+    return expand(os.path.join(
+            'binning/{binner}/{sample}/raw/quality',
+            checkm, 'results.tsv'
+        ), sample=wc.sample, binner=('maxbin2', 'metabat2', 'concoct')
+    )
+
+# ------------------------------------------------------------
 
 rule consolidate:
     input:
-        lambda wc: expand("binning/refined/{sample}/raw/generate/{group}/checkm/results.tsv", sample=wc.sample, group=('AB', 'AC', 'BC', 'ABC')),
-        lambda wc: expand("binning/{binner}/{sample}/raw/quality/checkm/results.tsv", sample=wc.sample, binner=('maxbin2', 'metabat2', 'concoct'))
+        checkm_input_groups,
+        checkm_input_binners
     output:
         'binning/refined/{sample}/raw/consolidate/checkm.results.tsv'
     params:
