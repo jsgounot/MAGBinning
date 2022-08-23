@@ -1,13 +1,14 @@
 # Snakemake module to run metabinner binner
 # I never been able to make this code works with my data
 # Need to be checked
+from scripts import snake_utils
 
 rule contig_depth:
     input:
-        bam = "data/mapping/short/{sample}/{sample}.bam",
-        bai = "data/mapping/short/{sample}/{sample}.bam.bai"
+        bam = "data/mapping/{kind}/{sample}/{sample}.bam",
+        bai = "data/mapping/{kind}/{sample}/{sample}.bam.bai"
     output:
-        "data/mapping/short/{sample}/{sample}.jgi_depth_nidv"
+        "data/mapping/{kind}/{sample}/{sample}.jgi_depth_nidv"
     conda:
         config['softparams']['conda']['metabat2']
     log:

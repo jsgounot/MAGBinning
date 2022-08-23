@@ -7,7 +7,8 @@ import os, glob, json
 # ADD THE MEGAHIT ASSEMBLY IN THE PROCESS
 
 for sample, sdata in config.items():
-    sdata['assembly'] = f'assembly/completed/megahit/{sample}.fa'
+    if 'assembly' not in sdata:
+        sdata['assembly'] = f'assembly/completed/megahit/{sample}.fa'
 
 # config = {sample: config[sample] for sample in list(config)[:3]}
 

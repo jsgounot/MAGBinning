@@ -1,19 +1,26 @@
 ## Another Snakemake assembly/binning module
 
-Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for metagenomic assembly and binning. This pipeline was at first a translation and cleaner version of the [metaLAS](https://github.com/SeanChenHCY/metaLAS) pipeline, itself very inspired by the [metaWRAP](https://github.com/bxlab/metaWRAP) pipeline. Current pipeline is now much more complete. including an optional assembly step, a complete quality module, a reassembly options and additional binners and quality assessment tools.
+Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for metagenomic assembly and binning. This pipeline was at first a translation and cleaner version of the [metaLAS](https://github.com/SeanChenHCY/metaLAS) pipeline, itself very inspired by the [metaWRAP](https://github.com/bxlab/metaWRAP) pipeline. Current pipeline is now much more complete. including an optional assembly step, a complete quality module, a reassembly options, additional binners and quality assessment tools.
 
 ### Pros
 
+* Flexibility and reliability
+  * Include multiple binners and assembly tools
+  * Tuned and tested with multiple datasets
+  * Deal with both short and long reads data
+
+* A bin quality module
+  * Quality of final bins is automatically assessed based on the [MIMAG](https://www.nature.com/articles/nbt.3893) standard
+  * Chimeric bins identification with [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
+  * Bins coverage is defined by mapping results
+  * Everything is saved into a single summary table
 * Fine-tuning and versatility of the snakemake pipeline
-	* Each pipeline part is a module and can be changed and or removed
+  * Each pipeline part is a module and can be changed and or removed
   * Time-consuming parts were tuned in the pipeline to make the whole process faster
   * Allow implementation of new tools easily
 * Rewriting of the [metaWRAP binning](https://i.imgur.com/JL665Qo.png) module
-	* Direct and faster implementation of original python scripts for snakemake
+  * Direct and faster implementation of original python scripts for snakemake
   * Installing the whole metaWrap (1Gb) can be avoided
-* Add a bin quality module
-	* Quality of final bins is automatically assessed based on the [MIMAG](https://www.nature.com/articles/nbt.3893) standard
-  * Chimeric bins identification with [GUNC](https://grp-bork.embl-community.io/gunc/index.html)
 
 ###  Pipeline description
 
@@ -95,6 +102,22 @@ for sample, sdata in config.items():
 ### Pipeline configuration
 
 The usage of each component is automatically determined based on the required output of the pipeline, defined in the main Snakefile `all` rule. It is encoded this way: `binning/{binner}/quality_data/{postbinning}/tables/bins_info.tsv`, where `binnner` can be  one or several elements of the list `('metabat2', 'maxbin2', 'concoct', 'refined')` and `postbinning` can be from `('raw', 'unicycler')`. For example, if you want to use `metabat2` with `unicyler` reassembly, you should write `binning/metabat2/quality_data/unicycler/tables/bins_info.tsv`. Memory and cores amount is also currently hardcoded based on my current experience to what fits the best to me, but you might want to change that for your need (see next section).
+
+### Working with nanopore data
+
+Binning algorithm can deal with both short-reads and nanopore long-reads data, just use `nanopore` as key instead of `r1` and `r2` in your configuration file. You might as well redefined the identity threshold used for the coverage extraction by `jgi_summary` ([see here](https://bitbucket.org/berkeleylab/metabat/issues/142/binning-with-nanopore-data)). This threshold is set to **85** for nanopore data while I keep the script default identity of **97** for short-read data. You can update this value per sample using the key `jgi_identity` in your configuration file as such:
+
+```json
+{
+	"MYSAMPLE": {
+		"assembly": "/path/to/assembly.fa",
+		"nanopore": "/path/to/longread.fq.gz",
+		"jgi_identity": 90
+	}
+}
+```
+
+If you have both short and long-read, short-reads are prioritized and long-reads are ignored.
 
 ### Specific notes
 

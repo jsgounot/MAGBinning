@@ -1,6 +1,7 @@
 # Snakemake module to run metabat2 binner
 # Default concoct use a mininimum contig size of 1000bp
 # I the assembly has no contig with this size, it crashes
+from scripts import snake_utils
 
 checkpoint link_assembly:
     input:
@@ -24,8 +25,8 @@ rule preprocessing_cut:
 rule preprocessing_cov:
     input:
         bed = "binning/concoct/{sample}/raw/preprocessing/contigs_10K.bed",
-        bam = "data/mapping/short/{sample}/{sample}.bam",
-        bai = "data/mapping/short/{sample}/{sample}.bam.bai"
+        bam = lambda wc: snake_utils.get_aln(config, wc, '.bam'),
+        bai = lambda wc: snake_utils.get_aln(config, wc, '.bam.bai')
     output:
         "binning/concoct/{sample}/raw/preprocessing/coverage_table.tsv",
     conda:

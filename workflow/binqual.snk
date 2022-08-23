@@ -9,6 +9,8 @@ import glob, os
 from itertools import product
 from collections import defaultdict
 
+from scripts import snake_utils
+
 SAMPLES = [sample for sample in config if sample != 'softparams']
 TDATA = defaultdict(dict)
 
@@ -32,7 +34,8 @@ rule bincontigs:
 rule bincov:
     input:
         bincontigs  = 'binning/{binner}/{sample}/{postbinning}/bincontigs.txt',
-        bincoverage = 'data/mapping/short/{sample}/{sample}.depth.tsv'
+        bincoverage =  lambda wc: snake_utils.get_aln(config, wc, '.depth.tsv')
+        # 'data/mapping/short/{sample}/{sample}.depth.tsv'
     output:
         'binning/{binner}/{sample}/{postbinning}/bincov.tsv'
     script:

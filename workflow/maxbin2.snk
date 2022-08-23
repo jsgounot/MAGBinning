@@ -1,18 +1,19 @@
 # Snakemake module to run maxbin2 binner
 # coverage.tsv is the result of samtools coverage of the bamfile linked to your assemblies (usually resulting from the mapping of short reads)
+from scripts import snake_utils
 
 rule make_abundance:
     input:
-        "data/mapping/short/{sample}/{sample}.coverage.tsv"
+        "data/mapping/{type}/{sample}/{sample}.coverage.tsv"
     output:
-        "data/mapping/short/{sample}/{sample}.maxbin.abundance.tsv"
+        "data/mapping/{type}/{sample}/{sample}.maxbin.abundance.tsv"
     shell:
         "awk '{{if (NR!=1) {{print $1 \"\\t\" $7}} }}' {input} > {output}"
 
 rule run:
     input:
         wa = "data/assemblies/{sample}/{sample}.assemblies.fa",
-        de = "data/mapping/short/{sample}/{sample}.maxbin.abundance.tsv"
+        de = lambda wc: snake_utils.get_aln(config, wc, '.maxbin.abundance.tsv')
     output:
         touch("binning/maxbin2/{sample}/raw/run/{sample}.check")
     params:

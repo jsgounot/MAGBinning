@@ -17,6 +17,8 @@ It's fair to say that this process is suboptimal in some cases since we could pr
 for quality. But this would break the current pipeline process and there is no way I'm doing this.
 '''
 
+from scripts import snake_utils
+
 SAMPLES = [sample for sample in config if sample != 'softparams']
 
 rule cat_contigs:
@@ -61,14 +63,14 @@ rule samtools_dict:
     shell:
         "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
 
-rule minimap2_mapping:
+rule minimap2_mapping_sr:
     input:
         r1 = lambda wildcards: config[wildcards.sample]["r1"],
         r2 = lambda wildcards: config[wildcards.sample]["r2"],
         mmi = rules.minimap2_index.output,
         sdict = rules.samtools_dict.output
     output:
-        temp('binning/vamb_process/raw/preprocessing/mapping/{sample}.bam')
+        temp('binning/vamb_process/raw/preprocessing/mapping/{sample}.short.bam')
     threads:
         8
     log:
@@ -78,9 +80,25 @@ rule minimap2_mapping:
     shell:
         'minimap2 -t {threads} -ax sr {input.mmi} {input.r1} {input.r2} -N 5 | grep -v "^@" | cat {input.sdict} - | samtools view -F 3584 -b - > {output} 2> {log}'
 
+rule minimap2_mapping_lr:
+    input:
+        lr = lambda wildcards: config[wildcards.sample]["nanopore"],
+        mmi = rules.minimap2_index.output,
+        sdict = rules.samtools_dict.output
+    output:
+        temp('binning/vamb_process/raw/preprocessing/mapping/{sample}.long.bam')
+    threads:
+        8
+    log:
+        'logs/vamb.minimap2.mapping.{sample}.log'
+    conda:
+        config['softparams']['conda']['minimap2']
+    shell:
+        'minimap2 -t {threads} -ax map-ont {input.mmi} {input.lr} -N 5 | grep -v "^@" | cat {input.sdict} - | samtools view -F 3584 -b - > {output} 2> {log}'
+
 rule samtools_sort:
     input:
-        rules.minimap2_mapping.output
+        lambda wc: snake_utils.get_aln_vamb(config, wc)
     output:
         temp('binning/vamb_process/raw/preprocessing/mapping/{sample}.sort.bam')
     params:
@@ -105,8 +123,10 @@ rule jgi_depth:
         'logs/vamb.jgi.{sample}.log'
     conda:
         config['softparams']['conda']['metabat2']
+    params:
+        pidentity = lambda wc: snake_utils.get_jgi_identity(config, wc)
     shell:
-        "jgi_summarize_bam_contig_depths --noIntraDepthVariance --outputDepth {output} {input} 2>{log}"
+        "jgi_summarize_bam_contig_depths --percentIdentity {params.pidentity} --noIntraDepthVariance --outputDepth {output} {input} 2> {log}"
 
 rule cut_column1to3: 
     input:

@@ -1,22 +1,47 @@
 # Snakemake module to run metabat2 binner
 
+'''
+# On long reads
+
+You can see this thread: https://bitbucket.org/berkeleylab/metabat/issues/142/binning-with-nanopore-data
+The problem is that metabat2 consider that a reads with an identity (I don't know how they precisely calculate this) lower than 97% is not good enough 
+to tell if the read come from this contig or another contig, which could be from another species. They want to keep reads with only 'species precision' identity
+for the analysis. This does not work with nanopore data, because reads can have low identity but still most likely come from the contig, based on the read length.
+One way to fix this is to simply lower the identity score with the risk of false positive. This must be done in all cases, otherwise almost no reads will be conserved,
+at least for low quality nanopore reads. I don't know the behavior for newer reads with less errors. Now you can also filter the bamfile for low quality reads, i.e reads
+with low quality alignments. It's tricky - how do you define a reads is well aligned, what about secondary alignments? The easiest way is to play with the mapQ score,
+which can be summarized by the probability of a read to incorrectly map to the genome. A mapQ score with minimap2 (can change with mapper) means a read with secondary alignments. By
+removing them, we might remove read from the same contig (secondary alignment can come from the same contig) too, but this is the price to pay. I set a mapQ value of 20, which can
+be translated to an error rate of ~ 0.01%, which is COMPLETLY subjective.  You will need to manually check these, and be careful about the output log of `jgi_summarize_bam_contig_depths`. 
+
+Some litterature:
+* https://genome.sph.umich.edu/wiki/Mapping_Quality_Scores
+* http://www.acgt.me/blog/2014/12/16/understanding-mapq-scores-in-sam-files-does-37-42
+* http://seqanswers.com/forums/showthread.php?t=9521
+'''
+
+from scripts import snake_utils
+
 rule contig_depth:
     input:
-        bam = "data/mapping/short/{sample}/{sample}.bam",
-        bai = "data/mapping/short/{sample}/{sample}.bam.bai"
+        bam = "data/mapping/{kind}/{sample}/{sample}.bam",
+        bai = "data/mapping/{kind}/{sample}/{sample}.bam.bai"
     output:
-        "data/mapping/short/{sample}/{sample}.jgi_depth"
+        "data/mapping/{kind}/{sample}/{sample}.jgi_depth"
+    params:
+        pidentity = lambda wc: snake_utils.get_jgi_identity(config, wc)
     conda:
         config['softparams']['conda']['metabat2']
     log:
-        "logs/{sample}.metabat2.log"
+        "logs/{sample}.{kind}.metabat2.log"
     shell:
-        "jgi_summarize_bam_contig_depths --outputDepth {output} {input.bam} 2>> {log}"
+        "jgi_summarize_bam_contig_depths --percentIdentity {params.pidentity} --outputDepth {output} {input.bam} 2>> {log}"
         
 rule run:
     input:
         wa = "data/assemblies/{sample}/{sample}.assemblies.fa",
-        de = "data/mapping/short/{sample}/{sample}.jgi_depth"
+        de = lambda wc: snake_utils.get_aln(config, wc, '.jgi_depth')
+        # "data/mapping/short/{sample}/{sample}.jgi_depth"
     output:
         "binning/metabat2/{sample}/raw/run/check.empty" # temp
     params:
