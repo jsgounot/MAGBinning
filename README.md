@@ -67,7 +67,9 @@ Couple of notes:
 * `GUNC` results are not used for MIMAG rank. **I highly recommend anyone to either remove or at least carefully examine chimeric MAGs**
 * Some studies do not use rank but make analysis base on a score: `completness - 5 x contamination`. MAGs can be selected using a threshold of score > 50.
 
-### Setup, conda environments and local variables
+### Installation and usage
+
+#### Setup, conda environments and local variables
 
 While it's in theory possible to run the pipeline without conda, using conda is highly recommended. This pipeline use an extensive amount of software with potential conflict between them. 
 
@@ -78,7 +80,7 @@ While it's in theory possible to run the pipeline without conda, using conda is 
 
 By default, I set up 7 conda environments (which can be found in `workflow/envs`). The conda environment to use for each software is provided within the file `condaenvs.json` . By default, snakemake will automatically downloads and sets up these environment, but you can change on environment with one of your by editing the json file.
 
-### Binning: The quick way
+#### Binning: The quick way
 
 I highly recommend having a look at the pipeline configuration process and the resources requirement first. Sample information (short-reads) and assembly must be provided in a configuration file (named `config_binning.json`).
 
@@ -90,7 +92,7 @@ You can then run the pipeline this way:
 
 This will run the pipeline with 18 cores and 60Gb of memory.
 
-### With an assembly
+#### With an assembly
 
 Most of the assemblers are not completely set up in the workflow, this part needs to be finished. While the default `binning.snk` workflow expects to find an assembly in the configuration file, you can easily edit this file to include an assembler as provided with `megahit_metabat2.snk` example. Here is the important line in the beginning of the script:
 
@@ -99,11 +101,11 @@ for sample, sdata in config.items():
     sdata['assembly'] = f'assembly/completed/megahit/{sample}.fa'
 ```
 
-### Pipeline configuration
+#### Pipeline configuration
 
 The usage of each component is automatically determined based on the required output of the pipeline, defined in the main Snakefile `all` rule. It is encoded this way: `binning/{binner}/quality_data/{postbinning}/tables/bins_info.tsv`, where `binnner` can be  one or several elements of the list `('metabat2', 'maxbin2', 'concoct', 'refined')` and `postbinning` can be from `('raw', 'unicycler')`. For example, if you want to use `metabat2` with `unicyler` reassembly, you should write `binning/metabat2/quality_data/unicycler/tables/bins_info.tsv`. Memory and cores amount is also currently hardcoded based on my current experience to what fits the best to me, but you might want to change that for your need (see next section).
 
-### Working with nanopore data
+#### Working with nanopore data
 
 Binning algorithm can deal with both short-reads and nanopore long-reads data, just use `nanopore` as key instead of `r1` and `r2` in your configuration file. You might as well redefined the identity threshold used for the coverage extraction by `jgi_summary` ([see here](https://bitbucket.org/berkeleylab/metabat/issues/142/binning-with-nanopore-data)). This threshold is set to **85** for nanopore data while I keep the script default identity of **97** for short-read data. You can update this value per sample using the key `jgi_identity` in your configuration file as such:
 
@@ -119,7 +121,7 @@ Binning algorithm can deal with both short-reads and nanopore long-reads data, j
 
 If you have both short and long-read, short-reads are prioritized and long-reads are ignored.
 
-### Specific notes
+### Software specific notes
 
 #### Checkm or checkm2
 
@@ -133,13 +135,15 @@ The snakemake implements a `refined` binner that mimic [metawrap](https://github
 * Identified the bins showing the best contamination and completeness values
 * Dereplicate from these bins potential duplicated contigs
 
-**Important note**: This approach favors low contamination against high completeness. The first step is to merge the **intersection** of contigs from two bins with similar contigs, and look if the intersection is better than the original two bins. The second step is to keep the bin that shows the better contamination/completeness ratio and remove similar bins (based on 80% similarity). This means **you can have contigs overlap between bins** with this method. **On the resource side**, the comparison of all possible combinations is based on checkM, which is slow and requires some memory (35Gb), making the whole process much slower. Finally, while this script should make the whole process much faster, some thresholds were removed from the original design and you might have more low-quality bins with this pipeline (that you can filter later if you want).
+**Important note**: This approach favors low contamination against high completeness. The first step is to merge the **intersection** of contigs from two bins with similar contigs, and look if the intersection is better than the original two bins. The second step is to keep the bin that shows the better contamination/completeness ratio and remove similar bins (based on 80% similarity). This means **<u>you can have contigs overlap between bins</u>** with this method. 
+
+On the resource side, the comparison of all possible combinations is based on checkM (or CheckM2), which can make the process slow (see note under). Finally, while this script should make the whole process much faster, some thresholds were removed from the original design and you might have more low-quality bins with this pipeline (that you can filter later if you want).
 
 #### VAMB
 
 An integration of [VAMB](https://github.com/RasmussenLab/vamb) is available with this pipeline. Note that VAMB is supposed to be run with GPU but the current implementation does not include this aspect, which makes the process slower but still doable. For a large dataset, you might want to run it with GPU. In this case, I recommend launching first snakemake as usual with option `--until vamb_paste_abundances`, this will lead to the creation of all input files requested by VAMB (which need a mapping for each sample). Once done, modify VAMB rule in `workflow/vamb.snk` by adding the `--cuda` option in the `vamb_params` variable. Relaunch the pipeline with option `--until vamb_vamb` and some GPUs. Once finished, you can run one last time the snakemake pipeline as usual.
 
-VAMB does not offer defined post and pre-processing of data, [which differs from usual binners](https://github.com/RasmussenLab/vamb/blob/master/doc/CAMI2.md). In this pipeline, we use arbitrary filters, encoded in the VAMB options with the `vamb_params`: `-o C -m 1000 --minfasta 500000`; and when we filter the output file with a minimum binsize of 100,000bp with the `minsize` parameter. You might want to modify these.
+VAMB does not offer defined post and pre-processing of data, [which differs from usual binners](https://github.com/RasmussenLab/vamb/blob/master/doc/CAMI2.md). In this pipeline, we use arbitrary filters, encoded in the VAMB options with the `vamb_params`: `-o C -m 1000 --minfasta 500000`; and when we filter the output file with a minimum binsize of 100,000bp with the `minsize` parameter. You might want to modify these values.
 
 ### Notes on the computer resources
 
@@ -149,23 +153,25 @@ The pipeline requires several tools, each having variable needs. Note that it's 
 
 The pipeline uses several times [checkpoint](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution) to finely adapts its process to generated bins. Therefore, the number of remaining rules will most likely increase during the pipeline execution. 
 
-#### The issue with CheckM
+#### The issue with CheckM (version 1)
 
 [CheckM lineage workflow](https://github.com/Ecogenomics/CheckM/wiki/Workflows#lineage-specific-workflow) uses pplacer to identify the lineage of the bin into a taxonomic tree. This process is memory intensive and scales linearly. In this pipeline, we assume that you might have a lot of bins, coming at different times. This way, we run Checkm individually for each sample. However, this might be suboptimal for low bins quantity and low memory setup, I hope this will not be a big issue for you. I noticed that Checkm crashes on some cluster configurations.
 
-#### Bins refinement - A memory expensive process
+#### Bins refinement - A memory expensive process (if you use CheckM 1)
 
-The binning refinement tool uses `checkM` completeness and contamination values on all binning result **and** binning combinations. This means that for a single sample with refinement from 3 binners, you have 3 + 4 ``checkM`` analyses to do. `checkM` internally uses `pplacer` which is known to be slow and requires [at least 35Gb of memory](https://github-wiki-see.page/m/Ecogenomics/CheckM/wiki/Installation). This can be improved by using additional `pplacer` threads, but the memory requirement is linear to the number of threads involved, so this is not an ideal solution. If memory is absolutely not an issue for you, you might want to change `checkM` calls directly in the snakemake pipeline at `workflow/binqual.snk`.
+The binning refinement tool uses `checkM` completeness and contamination values on all binning result **and** binning combinations. This means that for a single sample with refinement from 3 binners, you have 3 + 4 ``checkM`` analyses to do. `checkM` internally uses `pplacer` which is known to be slow and requires [at least 35Gb of memory](https://github-wiki-see.page/m/Ecogenomics/CheckM/wiki/Installation). This can be improved by using additional `pplacer` threads, but the memory requirement is linear to the number of threads involved, so this is not an ideal solution. If memory is absolutely not an issue for you, you might want to change `checkM` calls directly in the snakemake pipeline at `workflow/binqual.snk`. This issue is mostly resolved using `CheckM2` which does not use `pplacer`.
 
 #### Reassembly - A CPU expensive process
 
 This step uses [unicycler](https://github.com/rrwick/Unicycler) for each bin and can be particularly intensive, especially if you have high depth. This process involves 32 CPUs and `unicycler` calls several software, including [spades](https://www.biostars.org/p/267228/) which is known to take a lot of memory for some well-covered samples, [especially when it is too multi-threaded](https://www.biostars.org/p/267228/). You might need to reduce the rule to 16 CPUs. I do not recommend using the reassembly mode unless you have a low number of samples (< 20) or unlimited resources.
 
-#### BUG: Out of jobs ready to be started, but not all files built yet
+### Known bugs
+
+#### Out of jobs ready to be started, but not all files built yet
 
 You might hit this message, linked [to this issue](https://github.com/snakemake/snakemake/issues/823), usually almost at the end of the pipeline. This is not a big issue, and you can just run the pipeline again with the same arguments, snakemake will continue where he stopped and finish the last rules.
 
-## Limiting factors and todo list
+### Limiting factors and todo list
 
 * Allow long-read mapping when short-reads are not available
 * Unicycler sometimes crashes 
