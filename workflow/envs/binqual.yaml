@@ -1,5 +1,6 @@
 name: binqual
 channels:
+  - conda-forge
   - bioconda
 dependencies:
   - checkm-genome 

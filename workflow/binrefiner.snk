@@ -13,6 +13,8 @@
 # dereplicated bins which does not pass the checkM thresholds - and then find a solution to rearrange them to
 # to reinclude them in the dataset, but this seems complexe and deserve proper investigation before implementation.
 
+from scripts.snake_utils import get_checkm_dir
+
 def check_empty(fname):
     with open(fname) as f:
         for line in f:
@@ -53,18 +55,18 @@ module checkm:
 use rule * from checkm as checkm_*
 
 def checkm_input_groups(wc):
-    checkm = config['softparams']['checkm_dir']
+    checkm_dir = get_checkm_dir(config)
     return expand(os.path.join(
             'binning/refined/{sample}/raw/generate/{group}',
-            checkm, 'results.tsv'
+            checkm_dir, 'results.tsv'
         ), sample=wc.sample, group=('AB', 'AC', 'BC', 'ABC')
     )
 
 def checkm_input_binners(wc):
-    checkm = config['softparams']['checkm_dir']
+    checkm_dir = get_checkm_dir(config)
     return expand(os.path.join(
             'binning/{binner}/{sample}/raw/quality',
-            checkm, 'results.tsv'
+            checkm_dir, 'results.tsv'
         ), sample=wc.sample, binner=('maxbin2', 'metabat2', 'concoct')
     )
 

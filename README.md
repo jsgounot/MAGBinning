@@ -1,6 +1,15 @@
-## Another Snakemake assembly/binning module
+## Another Snakemake binning module
 
-Personal [snakemake](https://snakemake.readthedocs.io/en/stable/) module for metagenomic assembly and binning. This pipeline was at first a translation and cleaner version of the [metaLAS](https://github.com/SeanChenHCY/metaLAS) pipeline, itself very inspired by the [metaWRAP](https://github.com/bxlab/metaWRAP) pipeline. Current pipeline is now much more complete. including an optional assembly step, a complete quality module, a reassembly options, additional binners and quality assessment tools.
+Another [snakemake](https://snakemake.readthedocs.io/en/stable/) module for metagenomic assembly and binning. Why could you ask? Here are some reasons which motivated me to build this tool:
+1. Available pipelines are mostly all-in-one solutions with no modularity. You can't replace a binner with another binner. You can't compare binners.
+2. Available pipelines incorporate unnecessary tools and packages. Who needs to download 1Gb of codebase for binning?
+3. Most of the (old) binning refiners are not coded properly. Don't use CPU, shady options, ...
+4. Most of the binning tools do not incorporate quality controls of your bins. I wonder why.
+5. Most of the pipelines assume you have perfect data. What happens if your sample does not yield a single bin?
+
+This pipeline was at first a translation and cleaner version of the [metaLAS](https://github.com/SeanChenHCY/metaLAS) pipeline, itself very inspired by the [metaWRAP](https://github.com/bxlab/metaWRAP) pipeline. The current pipeline is now much more complete. including an optional assembly step, a complete quality module, reassembly options, additional binners, and quality assessment tools.
+
+Most importantly, this pipeline is highly modularized, incorporates multiple binners (while it is impossible to keep up with every new binners, adding a new one should be easy), and only download packages you need for your analysis.
 
 ### Pros
 
@@ -107,7 +116,9 @@ The usage of each component is automatically determined based on the required ou
 
 #### Working with nanopore data
 
-Binning algorithm can deal with both short-reads and nanopore long-reads data, just use `nanopore` as key instead of `r1` and `r2` in your configuration file. You might as well redefined the identity threshold used for the coverage extraction by `jgi_summary` ([see here](https://bitbucket.org/berkeleylab/metabat/issues/142/binning-with-nanopore-data)). This threshold is set to **85** for nanopore data while I keep the script default identity of **97** for short-read data. You can update this value per sample using the key `jgi_identity` in your configuration file as such:
+Binning algorithm can deal with both short-reads and nanopore long-reads data, just use `nanopore` as key instead of `r1` and `r2` in your configuration file. Traditional binners are not supposed to work well with current nanopore data (or anything with lower quality than Illumina reads). [LRBinner](https://almob.biomedcentral.com/articles/10.1186/s13015-022-00221-z) might be a solution but I still need to implement and compare this tool. A temporary solution is described below.
+
+You will need to redefine the identity threshold used for the coverage extraction by `jgi_summary` ([see here](https://bitbucket.org/berkeleylab/metabat/issues/142/binning-with-nanopore-data)). This threshold is set by default to **85** for nanopore data while I keep the script default identity of **97** for short-read data. You can update this value per sample using the key `jgi_identity` in your configuration file as such:
 
 ```json
 {
@@ -119,13 +130,17 @@ Binning algorithm can deal with both short-reads and nanopore long-reads data, j
 }
 ```
 
-If you have both short and long-read, short-reads are prioritized and long-reads are ignored.
+If you have both short and long-read, short-reads are prioritized for mapping and long-reads are ignored.
+
+#### Spring file
+
+[Spring](https://github.com/shubhamchandak94/Spring) file (compressed fastq) can be provided rather than fastq file. Current system assumes that your spring file encodes Illumina paired-end reads. To use it, just replace `r1` and`r2` with `spring` in your sample configuration.
 
 ### Software specific notes
 
 #### Checkm or checkm2
 
-[`Checkm2`](https://github.com/chklovski/CheckM2) is available and can be used flawlessly as a replacement of `checkm`. Note that the two softwares does not produce exactly the same results based on my tests. One major technical advantage of `checkm2` over `checkm` is its independence over `pplacer`, which make the former much faster and memory efficient. This might be especially useful when using the `refined` binner (see below). To use `checkm2` you need to install yourself the conda environment, link the binary in the main snakefile and setup the flag in the internal configuration dictionary (see `megahit_metabat2.snk` for an example).
+[`Checkm2`](https://github.com/chklovski/CheckM2) is available and can be used flawlessly as a replacement of `checkm`. Note that based on my tests, the two softwares does not produce exactly the same results. One major technical advantage of `checkm2` over `checkm` is its independence over `pplacer`, which make the former much faster and memory efficient. This might be especially useful when using the `refined` binner (see below). To use `checkm2` you can use the alternative `binqual_checkm2.yaml` environment, link the binary in the main snakefile and setup the flag in the internal configuration dictionary (see `megahit_metabat2.snk` for an example).
 
 #### Refined binner
 

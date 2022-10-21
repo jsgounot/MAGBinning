@@ -1,7 +1,8 @@
+from pathlib import Path
 OPERAMS = 'perl /home/ubuntu/OPERA-MS/OPERA-MS.pl'
 
 def getread(wc):
-    return config[wc.sample][wc.rtype]
+    return Path(config[wc.sample][wc.rtype]).resolve()
 
 rule link_reads:
     input:
@@ -51,7 +52,7 @@ rule link_operams:
 rule megahit_paired:
     input:
         r1 = 'reads/{sample}/r1.fastq.gz',
-        r2 = 'reads/{sample}/r1.fastq.gz'
+        r2 = 'reads/{sample}/r2.fastq.gz'
     output:
         outdir = directory('assembly/megahit/{sample}'),
         fasta = protected('assembly/megahit/{sample}/final.contigs.fa')   

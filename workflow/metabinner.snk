@@ -1,6 +1,7 @@
 # Snakemake module to run metabinner binner
 # I never been able to make this code works with my data
 # Need to be checked
+
 from scripts import snake_utils
 
 rule contig_depth:
@@ -9,12 +10,14 @@ rule contig_depth:
         bai = "data/mapping/{kind}/{sample}/{sample}.bam.bai"
     output:
         "data/mapping/{kind}/{sample}/{sample}.jgi_depth_nidv"
+    params:
+        pidentity = lambda wc: snake_utils.get_jgi_identity(config, wc)
     conda:
         config['softparams']['conda']['metabat2']
     log:
         "logs/{sample}.metabat2.log"
     shell:
-        "jgi_summarize_bam_contig_depths --outputDepth {output} --noIntraDepthVariance {input.bam} 2>> {log}"
+        "jgi_summarize_bam_contig_depths --percentIdentity {params.pidentity} --outputDepth {output} --noIntraDepthVariance {input.bam} 2>> {log}"
         
 rule depth_cut:
     input:

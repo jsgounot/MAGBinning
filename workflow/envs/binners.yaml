@@ -1,5 +1,6 @@
 name: binners
 channels:
+  - conda-forge
   - bioconda
 dependencies:
   - maxbin2

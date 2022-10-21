@@ -69,7 +69,7 @@ rule checkm2:
     params:
         inputs = '{prefix}/checkm/inputs/*.checkminput',
         outdir = '{prefix}/checkm2/',
-        exe    = config['softparams']['checkm2']
+        exe    = config['softparams']['softdb']['checkm2']
     threads:
         8
     log:

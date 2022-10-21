@@ -1,11 +1,11 @@
 {
-    "barrnap"   : "envs/binqual.yaml",
+    "barrnap"   : "envs/binqual_checkm2.yaml",
     "biopy"     : "envs/biopy.yaml",
     "bwa"       : "envs/mapping.yaml",
     "checkm"    : "envs/binqual.yaml",
-    "checkm2"   : "checkm2",
+    "checkm2"   : "envs/binqual_checkm2.yaml",
     "concoct"   : "envs/binners.yaml",
-    "gunc"      : "envs/binqual.yaml",
+    "gunc"      : "envs/binqual_checkm2.yaml",
     "megahit"   : "envs/assemblers.yaml",
     "maxbin2"   : "envs/binners.yaml",
     "metabat2"  : "envs/binners.yaml",
@@ -13,7 +13,8 @@
     "operams"   : "envs/operams.yaml",
     "picard"    : "envs/mapping.yaml",
     "samtools"  : "envs/mapping.yaml",
-    "trnascanse": "envs/binqual.yaml",
+    "spring"    : "envs/mapping.yaml",
+    "trnascanse": "envs/binqual_checkm2.yaml",
     "unicycler" : "envs/assemblers.yaml",
     "vamb"      : "envs/vamb.yaml"
 }

@@ -1,0 +1,21 @@
+rule make_temp_dir_decompression:
+    output:
+        temp(directory('springwork/{sample}_ddir'))
+    shell:
+        'mkdir -p {output}'
+
+rule springpe_decompress:
+    input:
+        spring = lambda wc: config[wc.sample]['spring'],
+        tempdir = 'springwork/{sample}_ddir'
+    output:
+        r1 = temp('temp_spring/{sample}.r1.fastq.gz'),
+        r2 = temp('temp_spring/{sample}.r2.fastq.gz')
+    threads:
+        8
+    resources:
+        disk_mb = 4000
+    conda:
+        config['softparams']['conda']['spring']
+    shell:
+        'spring -d -g -t {threads} -w {input.tempdir} -i {input.spring} -o {output.r1} {output.r2}'

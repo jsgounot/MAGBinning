@@ -51,10 +51,10 @@ module checkm:
 use rule * from checkm as checkm_*
 
 def checkm_input(wc):
-    checkm = config['softparams']['checkm_dir']
+    checkm_dir = snake_utils.get_checkm_dir(config)
     return os.path.join(
             'binning/{binner}/{sample}/{postbinning}/quality',
-            checkm, 'results.tsv'
+            checkm_dir, 'results.tsv'
         )
 
 # ------------------------------------------------------------------------------------
@@ -145,7 +145,7 @@ rule gunc:
         "binning/{binner}/{sample}/{postbinning}/quality/gunc/GUNC.progenomes_2.1.maxCSS_level.tsv"
     params:
         directory = "binning/{binner}/{sample}/{postbinning}/quality/gunc",
-        db = config['softparams']['gunc_db']
+        db = config['softparams']['softdb']['gunc_db']
     threads:
         8
     conda:

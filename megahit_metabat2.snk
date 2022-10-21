@@ -4,6 +4,16 @@ import os, glob, json
 # snakemake -s binning.snk --configfile res_assembly/config_binning.json -d res_binning --use-conda --cores 18 --resources mem_mb=60000
 
 # ----------------------------------------------------------------------------------------------------
+# DEAL WITH SPRING FILES
+
+for sample, sdata in config.items():
+    if 'spring' in sdata:
+        if 'r1' in sdata or 'r2' in sdata:
+            raise Exception(f'Error: Both spring and r1/r2 were found for sample {sample}')        
+        sdata['r1'] = f'temp_spring/{sample}.r1.fastq.gz'
+        sdata['r2'] = f'temp_spring/{sample}.r2.fastq.gz'
+
+# ----------------------------------------------------------------------------------------------------
 # ADD THE MEGAHIT ASSEMBLY IN THE PROCESS
 
 for sample, sdata in config.items():
@@ -13,17 +23,13 @@ for sample, sdata in config.items():
 # config = {sample: config[sample] for sample in list(config)[:3]}
 
 # ----------------------------------------------------------------------------------------------------
-# UPDATE THIS PART WITH YOUR CONFIGURATION
+# SOFTWARES AND CONDA ENVIRONMENTS
 
-config['softparams'] = {
-        'gunc_db' : "/mnt/volume1/Projects/MAGBinning/database/gunc/gunc_db_progenomes2.1.dmnd"
-    }
+config['softparams'] = {}
 
-config['softparams']['checkm_dir'] = 'checkm2'
-config['softparams']['checkm2'] = '/home/ubuntu/Software/checkm2/checkm2/bin/checkm2'
-
-# ----------------------------------------------------------------------------------------------------
-# CONDA CONFIGURATION
+fname = workflow.source_path('softdb.json')
+with open(fname) as f:
+    config['softparams']['softdb'] = json.load(f)
 
 fname = workflow.source_path('condaenvs.json')
 with open(fname) as f:
@@ -34,16 +40,22 @@ with open(fname) as f:
 rule all:
     input:
         'binning/metabat2/quality_data/raw/tables/bins_info.tsv',
-        'binning/maxbin2/quality_data/raw/tables/bins_info.tsv',
-        'binning/concoct/quality_data/raw/tables/bins_info.tsv',
-        'binning/refined/quality_data/raw/tables/bins_info.tsv',
-        'binning/vamb/quality_data/raw/tables/bins_info.tsv',
+        #'binning/maxbin2/quality_data/raw/tables/bins_info.tsv',
+        #'binning/concoct/quality_data/raw/tables/bins_info.tsv',
+        #'binning/refined/quality_data/raw/tables/bins_info.tsv',
+        #'binning/vamb/quality_data/raw/tables/bins_info.tsv',
 
 rule temp_empty:
     output:
         temp(touch('empty_file.tmp'))
 
 # ----------------------------------------------------------------------------------------------------
+
+module spring:
+    snakefile: "workflow/spring.snk"
+    config: config
+
+use rule * from spring as spring_*
 
 module assembly:
     snakefile: "workflow/assembly.snk"
