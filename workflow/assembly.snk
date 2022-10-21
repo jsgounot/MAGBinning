@@ -2,15 +2,17 @@ from pathlib import Path
 OPERAMS = 'perl /home/ubuntu/OPERA-MS/OPERA-MS.pl'
 
 def getread(wc):
-    return Path(config[wc.sample][wc.rtype]).resolve()
+    return config[wc.sample][wc.rtype]
 
 rule link_reads:
     input:
         getread
     output:
         'reads/{sample}/{rtype}.fastq.gz'
+    params:
+        input_resolved = lambda wc: Path(getread(wc)).resolve()
     shell:
-        'ln -s {input} {output}'
+        'ln -s {params.input_resolved} {output}'
 
 rule uncompress_long:
     input:
