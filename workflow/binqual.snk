@@ -16,11 +16,13 @@ TDATA = defaultdict(dict)
 
 checkpoint binqual_entry:
     input:
-        "binning/{binner}/{sample}/{postbinning}/binlist.txt"
+        r1 = lambda wc: config[wc.sample]["r1"],
+        r2 = lambda wc: config[wc.sample]["r2"],
+        binlist = "binning/{binner}/{sample}/{postbinning}/binlist.txt"
     output:
         "binning/{binner}/{sample}/{postbinning}/quality/binlist.txt"
     shell:
-        'ln -s $(pwd)/{input} {output}'
+        'ln -s $(pwd)/{input.binlist} {output}'
 
 rule bincontigs:
     input:

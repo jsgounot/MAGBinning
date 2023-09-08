@@ -4,19 +4,9 @@ OPERAMS = 'perl /home/ubuntu/OPERA-MS/OPERA-MS.pl'
 def getread(wc):
     return config[wc.sample][wc.rtype]
 
-rule link_reads:
-    input:
-        getread
-    output:
-        'reads/{sample}/{rtype}.fastq.gz'
-    params:
-        input_resolved = lambda wc: Path(getread(wc)).resolve()
-    shell:
-        'ln -s {params.input_resolved} {output}'
-
 rule uncompress_long:
     input:
-        'reads/{sample}/nanopore.fastq.gz'
+        lambda wc: config[wc.sample]['nanopore']
     output:
         temp('reads/{sample}/nanopore.fastq')
     shell:
@@ -24,8 +14,8 @@ rule uncompress_long:
 
 rule operams:
     input:
-        sr1 = 'reads/{sample}/r1.fastq.gz',
-        sr2 = 'reads/{sample}/r2.fastq.gz',
+        sr1 = lambda wc: config[wc.sample]["r1"],
+        sr2 = lambda wc: config[wc.sample]["r2"],
         lr = 'reads/{sample}/nanopore.fastq'
     params:
         executable = OPERAMS
@@ -53,14 +43,14 @@ rule link_operams:
 
 rule megahit_paired:
     input:
-        r1 = 'reads/{sample}/r1.fastq.gz',
-        r2 = 'reads/{sample}/r2.fastq.gz'
+        r1 = lambda wc: config[wc.sample]["r1"],
+        r2 = lambda wc: config[wc.sample]["r2"]
     output:
         outdir = directory('assembly/megahit/{sample}'),
-        fasta = protected('assembly/megahit/{sample}/final.contigs.fa')   
+        fasta = 'assembly/megahit/{sample}/final.contigs.fa'
     params:
         # In this version I remove intermediate files which took a lot of space
-        interm = 'assembly/megahit/{sample}/intermediate_contigs'
+        interm = ancient('assembly/megahit/{sample}/intermediate_contigs')
     conda:
         config['softparams']['conda']['megahit']
     threads:
